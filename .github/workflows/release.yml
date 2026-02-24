@@ -37,3 +37,11 @@ jobs:
           name: Build ${{ steps.sha.outputs.short }}
           body: "Automated build from commit ${{ github.sha }}"
           files: web-dist.tar.gz
+
+      - name: Trigger server rebuild
+        if: github.ref == 'refs/heads/main'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DISPATCH_TOKEN }}
+          repository: haven-chat-org/server
+          event-type: web-release
