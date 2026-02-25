@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES } from "../i18n/index.js";
 import { useAuthStore } from "../store/auth.js";
 import { useUiStore, type Theme } from "../store/ui.js";
 import { useVoiceStore } from "../store/voice.js";
@@ -1429,7 +1430,7 @@ function SecurityTab() {
 // ─── Appearance Tab ─────────────────────────────────
 
 function AppearanceTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
 
@@ -1473,6 +1474,21 @@ function AppearanceTab() {
 
   return (
     <>
+      <div className="settings-section">
+        <div className="settings-section-title">{t("userSettings.appearance.language")}</div>
+        <p className="settings-description">{t("userSettings.appearance.languageDesc")}</p>
+        <select
+          className="settings-select"
+          value={i18n.language}
+          onChange={(e) => i18n.changeLanguage(e.target.value)}
+        >
+          {SUPPORTED_LANGUAGES.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.nativeName} ({lang.name})
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="settings-section">
         <div className="settings-section-title">{t("userSettings.appearance.theme")}</div>
         <p className="settings-description">{t("userSettings.appearance.themeDesc")}</p>
