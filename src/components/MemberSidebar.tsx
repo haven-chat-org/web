@@ -320,7 +320,7 @@ function MemberItem({
       </div>
       <div className="member-info">
         <span className="member-name" style={topRole?.color ? { color: topRole.color } : undefined}>
-          {displayName}
+          {displayName}{member.is_system && <span className="official-badge">{t("officialBadge")}</span>}
         </span>
         {showUsername && (
           <span className="member-username">{member.display_name || member.username}</span>

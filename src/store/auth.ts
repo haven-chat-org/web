@@ -156,6 +156,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await store.saveSignedPreKey(signedPre);
     await store.saveOneTimePreKeys(oneTimeKeys);
 
+    // Reset onboarding so the new user gets the tour
+    // (the flag is persisted in localStorage and may carry over from a previous user)
+    const { useUiStore } = await import("./ui.js");
+    useUiStore.getState().setOnboardingCompleted(false);
+
     set({
       user: res.user,
       identityKeyPair: identity,

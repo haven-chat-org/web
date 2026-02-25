@@ -31,6 +31,7 @@ import SecurityPhraseRestore from "../components/SecurityPhraseRestore.js";
 import ProfilePopup from "../components/ProfilePopup.js";
 const ExportModal = lazy(() => import("../components/ExportModal.js"));
 const DownloadAttachmentsModal = lazy(() => import("../components/DownloadAttachmentsModal.js"));
+import { useOnboarding } from "../hooks/useOnboarding.js";
 
 export default function Chat() {
   const { t } = useTranslation();
@@ -299,6 +300,17 @@ export default function Chat() {
     }
   }, [wsState, user?.id]);
 
+  // ─── Onboarding tour (runs BEFORE security phrase setup) ──
+  const { startTour } = useOnboarding();
+  const onboardingCompleted = useUiStore((s) => s.onboardingCompleted);
+
+  useEffect(() => {
+    if (dataLoaded && wsState === "connected") {
+      const timer = setTimeout(() => startTour(), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [dataLoaded, wsState, startTour]);
+
   const currentChannel = channels.find((c) => c.id === currentChannelId);
   const channelDisplay = currentChannel
     ? parseChannelDisplay(currentChannel.encrypted_meta, user?.id ?? "")
@@ -557,8 +569,8 @@ export default function Chat() {
       {exportModalOpen && <Suspense fallback={null}><ExportModal /></Suspense>}
       {attachmentsModalOpen && <Suspense fallback={null}><DownloadAttachmentsModal /></Suspense>}
 
-      {backupPending && backupAvailable && <SecurityPhraseRestore />}
-      {backupPending && !backupAvailable && <SecurityPhraseSetup />}
+      {backupPending && onboardingCompleted && backupAvailable && <SecurityPhraseRestore />}
+      {backupPending && onboardingCompleted && !backupAvailable && <SecurityPhraseSetup />}
 
 
       {mentionPopup && (

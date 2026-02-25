@@ -78,6 +78,11 @@ interface UiState {
   attachmentsModalOpen: boolean;
   attachmentsModalContext: { type: "channel" | "dm"; id: string } | null;
 
+  /** Onboarding tour state */
+  onboardingCompleted: boolean;   // persisted
+  onboardingActive: boolean;      // transient
+  onboardingRequested: boolean;   // transient
+
   selectServer(id: string | null): void;
   toggleMemberSidebar(): void;
   setShowFriends(show: boolean): void;
@@ -113,6 +118,10 @@ interface UiState {
   closeExportModal(): void;
   openAttachmentsModal(context: { type: "channel" | "dm"; id: string }): void;
   closeAttachmentsModal(): void;
+  setOnboardingCompleted(completed: boolean): void;
+  setOnboardingActive(active: boolean): void;
+  requestOnboarding(): void;
+  clearOnboardingRequest(): void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -152,6 +161,9 @@ export const useUiStore = create<UiState>()(
       exportModalContext: null,
       attachmentsModalOpen: false,
       attachmentsModalContext: null,
+      onboardingCompleted: false,
+      onboardingActive: false,
+      onboardingRequested: false,
 
       selectServer(id) {
         set({
@@ -265,6 +277,10 @@ export const useUiStore = create<UiState>()(
       closeExportModal() { set({ exportModalOpen: false, exportModalContext: null }); },
       openAttachmentsModal(context) { set({ attachmentsModalOpen: true, attachmentsModalContext: context }); },
       closeAttachmentsModal() { set({ attachmentsModalOpen: false, attachmentsModalContext: null }); },
+      setOnboardingCompleted(completed) { set({ onboardingCompleted: completed }); },
+      setOnboardingActive(active) { set({ onboardingActive: active }); },
+      requestOnboarding() { set({ onboardingCompleted: false, onboardingRequested: true }); },
+      clearOnboardingRequest() { set({ onboardingRequested: false }); },
       setUserNote(userId, note) {
         set((s) => {
           if (!note.trim()) {
@@ -296,6 +312,7 @@ export const useUiStore = create<UiState>()(
         memberSidebarWidth: state.memberSidebarWidth,
         serverBarWidth: state.serverBarWidth,
         hideMutedChannels: state.hideMutedChannels,
+        onboardingCompleted: state.onboardingCompleted,
       }),
     },
   ),

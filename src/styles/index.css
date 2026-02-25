@@ -10620,3 +10620,159 @@ em-emoji-picker {
   50% { width: 50%; margin-left: 25%; }
   100% { width: 20%; margin-left: 80%; }
 }
+
+/* ─── Onboarding Tour (driver.js) ─────────────────── */
+
+.driver-overlay {
+  z-index: 10001 !important;
+}
+.driver-popover {
+  z-index: 10002 !important;
+}
+
+.driver-popover.haven-tour {
+  background: var(--bg-floating);
+  color: var(--text-normal);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  max-width: 380px;
+  font-family: var(--font);
+}
+
+.driver-popover.haven-tour .driver-popover-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-header);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.driver-popover.haven-tour .driver-popover-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.driver-popover.haven-tour .driver-popover-progress-text {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.driver-popover.haven-tour .driver-popover-footer {
+  margin-top: 8px;
+}
+
+.driver-popover.haven-tour button {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.driver-popover.haven-tour .driver-popover-next-btn,
+.driver-popover.haven-tour .driver-popover-done-btn {
+  background: var(--blurple);
+  color: #fff;
+  text-shadow: none;
+}
+.driver-popover.haven-tour .driver-popover-next-btn:hover,
+.driver-popover.haven-tour .driver-popover-done-btn:hover {
+  background: var(--blurple-hover);
+}
+
+.driver-popover.haven-tour .driver-popover-prev-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  text-shadow: none;
+}
+.driver-popover.haven-tour .driver-popover-prev-btn:hover {
+  color: var(--text-normal);
+  background: var(--bg-hover);
+}
+
+.driver-popover.haven-tour .driver-popover-close-btn {
+  color: var(--text-muted);
+}
+.driver-popover.haven-tour .driver-popover-close-btn:hover {
+  color: var(--text-normal);
+}
+
+/* Arrow colors */
+.driver-popover.haven-tour .driver-popover-arrow-side-left .driver-popover-arrow {
+  border-left-color: var(--bg-floating);
+}
+.driver-popover.haven-tour .driver-popover-arrow-side-right .driver-popover-arrow {
+  border-right-color: var(--bg-floating);
+}
+.driver-popover.haven-tour .driver-popover-arrow-side-top .driver-popover-arrow {
+  border-top-color: var(--bg-floating);
+}
+.driver-popover.haven-tour .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-bottom-color: var(--bg-floating);
+}
+
+/* Welcome & encryption centered steps */
+.driver-popover.haven-tour-welcome,
+.driver-popover.haven-tour-encryption {
+  max-width: 440px;
+  text-align: center;
+}
+.driver-popover.haven-tour-welcome .driver-popover-title {
+  font-size: 24px;
+}
+
+/* Focus indicator */
+.driver-popover.haven-tour button:focus-visible {
+  outline: 2px solid var(--text-link);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+[data-reduced-motion] .driver-overlay,
+[data-reduced-motion] .driver-popover {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .driver-popover.haven-tour {
+    max-width: calc(100vw - 32px);
+    font-size: 13px;
+  }
+  .driver-popover.haven-tour .driver-popover-title {
+    font-size: 16px;
+  }
+  .driver-popover.haven-tour-welcome,
+  .driver-popover.haven-tour-encryption {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* ─── Official System User Badge ──────────────────── */
+.official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--blurple);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.official-badge::before {
+  content: "\2713";
+  font-size: 9px;
+}
