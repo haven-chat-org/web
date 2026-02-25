@@ -5852,6 +5852,7 @@ em-emoji-picker {
 /* ─── Settings Sections ──────────────────────────── */
 .settings-section {
   max-width: 660px;
+  margin-bottom: 24px;
 }
 
 .settings-card {
