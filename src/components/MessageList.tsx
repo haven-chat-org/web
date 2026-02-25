@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback, Fragment, lazy, Susp
 import { useTranslation } from "react-i18next";
 import { useChatStore } from "../store/chat.js";
 import { useAuthStore } from "../store/auth.js";
+import { useFriendsStore } from "../store/friends.js";
 import { Permission } from "@haven-chat-org/core";
 import { usePermissions } from "../hooks/usePermissions.js";
 import MessageAttachments from "./MessageAttachments.js";
@@ -94,6 +95,8 @@ export default function MessageList() {
   const customEmojis = useChatStore((s) => s.customEmojis);
   const newMessageDividers = useChatStore((s) => s.newMessageDividers);
   const user = useAuthStore((s) => s.user);
+  const friends = useFriendsStore((s) => s.friends);
+  const systemUserIds = useMemo(() => new Set(friends.filter((f) => f.is_system).map((f) => f.user_id)), [friends]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const channelMessages = currentChannelId ? messages[currentChannelId] ?? [] : [];
@@ -347,7 +350,7 @@ export default function MessageList() {
                       onClick={(e) => handleAvatarClick(msg.senderId, e)}
                       style={userRoleColors[msg.senderId] ? { color: userRoleColors[msg.senderId] } : undefined}
                     >
-                      {senderName}
+                      {senderName}{systemUserIds.has(msg.senderId) && <span className="official-badge">{t("officialBadge")}</span>}
                     </span>
                     <time className="message-time" dateTime={new Date(msg.timestamp).toISOString()}>
                       {new Date(msg.timestamp).toLocaleString([], {

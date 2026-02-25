@@ -1494,6 +1494,19 @@ function AppearanceTab() {
           ))}
         </div>
       </div>
+      <div className="settings-section">
+        <div className="settings-section-title">{t("userSettings.appearance.onboardingSection")}</div>
+        <p className="settings-description">{t("userSettings.appearance.onboardingDesc")}</p>
+        <button
+          className="btn-secondary"
+          onClick={() => {
+            useUiStore.getState().requestOnboarding();
+            useUiStore.getState().setShowUserSettings(false);
+          }}
+        >
+          {t("userSettings.appearance.restartTour")}
+        </button>
+      </div>
     </>
   );
 }

@@ -273,7 +273,7 @@ function FriendRow({
           <span className={`friend-avatar-status ${isOnline ? "online" : "offline"}`} />
         </div>
         <div className="friend-info">
-          <span className="friend-name">{displayName}</span>
+          <span className="friend-name">{displayName}{friend.is_system && <span className="official-badge">{t("officialBadge")}</span>}</span>
           <span className="friend-username">
             {friend.status === "pending"
               ? friend.is_incoming

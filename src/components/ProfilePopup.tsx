@@ -357,7 +357,7 @@ export default function ProfilePopup({ userId, serverId, position, onClose }: Pr
           <>
             {/* Names */}
             <div className="profile-popup-names">
-              <span className="profile-popup-displayname">{displayName}</span>
+              <span className="profile-popup-displayname">{displayName}{profile.is_system && <span className="official-badge">{t("officialBadge")}</span>}</span>
               <span className="profile-popup-username">{profile.username}</span>
             </div>
 

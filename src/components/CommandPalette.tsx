@@ -112,6 +112,12 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
         action: () => { setShowAdminPanel(true); onClose(); },
       });
     }
+    results.push({
+      id: "act-tour",
+      label: t("commandPalette.restartTour"),
+      category: "actions",
+      action: () => { useUiStore.getState().requestOnboarding(); onClose(); },
+    });
 
     return results;
   }, [channels, servers, friends, user, selectedServerId]);

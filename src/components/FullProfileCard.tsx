@@ -176,7 +176,7 @@ export default function FullProfileCard({ userId, serverId, onClose }: Props) {
               )}
 
               <div className="full-profile-names">
-                <h2 className="full-profile-displayname" id="full-profile-title">{displayName}</h2>
+                <h2 className="full-profile-displayname" id="full-profile-title">{displayName}{profile.is_system && <span className="official-badge">{t("officialBadge")}</span>}</h2>
                 <span className="full-profile-username">{profile.username}</span>
               </div>
 
