@@ -966,6 +966,8 @@
   "userSettings.appearance.customCssDesc": "Advanced: paste your own CSS to customize Haven's appearance. Changes apply immediately.",
   "userSettings.appearance.default": "Default",
   "userSettings.appearance.forest": "Forest",
+  "userSettings.appearance.language": "Language",
+  "userSettings.appearance.languageDesc": "Choose your preferred display language. Haven will use this language for all interface text.",
   "userSettings.appearance.lightMode": "Light Mode",
   "userSettings.appearance.nightMode": "Night Mode",
   "userSettings.appearance.sage": "Sage",
