@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState } from "react";
+import DOMPurify from "dompurify";
 import { getServerUrl } from "../lib/serverUrl";
 import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
@@ -110,6 +111,11 @@ function countCustomEmojis(text: string): number {
   return (text.match(CUSTOM_EMOJI_RE) || []).length;
 }
 
+/** Escape a string for safe use in HTML attributes */
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /** Replace :uuid: patterns in HTML with <img> tags for custom emojis */
 function replaceCustomEmojis(
   input: string,
@@ -119,7 +125,9 @@ function replaceCustomEmojis(
   return input.replace(CUSTOM_EMOJI_RE, (match, id) => {
     const emoji = emojiMap.get(id);
     if (!emoji) return match;
-    return `<img class="custom-emoji" data-custom-emoji data-emoji-id="${id}" src="${baseUrl}${emoji.image_url}" alt=":${emoji.name}:" title=":${emoji.name}:" draggable="false" />`;
+    const safeName = escapeAttr(emoji.name);
+    const safeUrl = escapeAttr(emoji.image_url);
+    return `<img class="custom-emoji" data-custom-emoji data-emoji-id="${id}" src="${baseUrl}${safeUrl}" alt=":${safeName}:" title=":${safeName}:" draggable="false" />`;
   });
 }
 
@@ -152,7 +160,7 @@ export default function MessageBody({ text, contentType, formatting, customEmoji
         if (customEmojiMap && customEmojiMap.size > 0) {
           result = replaceCustomEmojis(result, customEmojiMap, baseUrl);
         }
-        return result;
+        return DOMPurify.sanitize(result);
       } catch {
         return null;
       }
@@ -248,7 +256,7 @@ export default function MessageBody({ text, contentType, formatting, customEmoji
     const customOnly = isCustomEmojiOnly(text);
     const customCount = countCustomEmojis(text);
     const jumboCustom = customOnly && customCount <= 10;
-    const processed = replaceCustomEmojis(text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"), customEmojiMap!, baseUrl);
+    const processed = DOMPurify.sanitize(replaceCustomEmojis(text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"), customEmojiMap!, baseUrl));
     return <div className={`message-body${jumboCustom ? " message-body-jumbo" : ""}`} dangerouslySetInnerHTML={{ __html: processed }} />;
   }
 
