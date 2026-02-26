@@ -52,6 +52,7 @@ export default function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-popups"
           title={t("linkPreview.youtubeTitle")}
         />
       </div>
@@ -67,6 +68,7 @@ export default function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
           height={embed.subtype === "track" ? 80 : 152}
           allow="encrypted-media"
           loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-popups"
           title={t("linkPreview.spotifyTitle")}
         />
       </div>
