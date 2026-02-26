@@ -144,14 +144,14 @@
 /* Accessibility font: OpenDyslexic */
 @font-face {
   font-family: "OpenDyslexic";
-  src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff2") format("woff2");
+  src: url("/fonts/open-dyslexic-regular.woff") format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "OpenDyslexic";
-  src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-bold.woff2") format("woff2");
+  src: url("/fonts/open-dyslexic-bold.woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -160,14 +160,14 @@
 /* Accessibility font: Atkinson Hyperlegible */
 @font-face {
   font-family: "Atkinson Hyperlegible";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.0.0/files/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2");
+  src: url("/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Atkinson Hyperlegible";
-  src: url("https://cdn.jsdelivr.net/npm/@fontsource/atkinson-hyperlegible@5.0.0/files/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2");
+  src: url("/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
