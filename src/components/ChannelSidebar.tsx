@@ -919,7 +919,7 @@ function ChannelItemContent({ ch, isOverlay, onContextMenu }: { ch: ChannelRespo
         data-roving-item
         tabIndex={ch.id === currentChannelId ? 0 : -1}
       >
-        {showUnreadDot && mentions === 0 && <span className="channel-unread-dot" />}
+        {showUnreadDot && mentions === 0 && unread > 0 && <span className="channel-unread-dot" />}
         {isVoice ? (
           <svg width="16" height="16" viewBox="0 0 24 24" fill={isInThisVoice ? "var(--green)" : "currentColor"} className="channel-type-icon">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z" />
@@ -941,7 +941,11 @@ function ChannelItemContent({ ch, isOverlay, onContextMenu }: { ch: ChannelRespo
             <span className="sr-only">{t("channelSidebar.channel.muted")}</span>
           </>
         )}
-        {mentions > 0 && <span className="unread-badge" aria-label={`${mentions} unread messages`}>{mentions}</span>}
+        {mentions > 0
+          ? <span className="unread-badge" aria-label={`${mentions} mentions`}>{mentions}</span>
+          : unread > 0 && !muted && notifySetting !== "nothing"
+            ? <span className="unread-badge unread-badge-muted" aria-label={`${unread} unread messages`}>{unread}</span>
+            : null}
       </button>
       {!isOverlay && isVoice && ch.server_id && <VoiceChannelPreview channelId={ch.id} serverId={ch.server_id} />}
     </>
