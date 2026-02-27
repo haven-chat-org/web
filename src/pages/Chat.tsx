@@ -143,6 +143,16 @@ export default function Chat() {
     if (isMobile && currentChannelId) setMobileSidebarOpen(false);
   }, [currentChannelId, isMobile]);
 
+  // ─── Browser tab title with unread count ─────────
+  const unreadCounts = useChatStore((s) => s.unreadCounts);
+  const mentionCounts = useChatStore((s) => s.mentionCounts);
+  useEffect(() => {
+    const totalMentions = Object.values(mentionCounts).reduce((a, b) => a + b, 0);
+    const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+    const count = totalMentions || totalUnread;
+    document.title = count > 0 ? `(${count}) Haven` : "Haven";
+  }, [unreadCounts, mentionCounts]);
+
   // ─── Invite acceptance via /invite/:code URL ───────
   const location = useLocation();
   const navigate = useNavigate();
