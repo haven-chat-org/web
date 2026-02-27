@@ -1,6 +1,6 @@
 import { Component, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { AudioPresets } from "livekit-client";
+import { AudioPresets, type DisconnectReason } from "livekit-client";
 import { useVoiceStore } from "../store/voice.js";
 
 /** Timeout (ms) for the LiveKit connection to establish before giving up. */
@@ -73,7 +73,7 @@ export default function VoiceConnection({ children }: { children?: ReactNode }) 
     setConnectionState("connected");
   }, [setConnectionState]);
 
-  const handleDisconnected = useCallback(() => {
+  const handleDisconnected = useCallback((reason?: DisconnectReason) => {
     if (connectTimerRef.current) {
       clearTimeout(connectTimerRef.current);
       connectTimerRef.current = null;
@@ -83,6 +83,7 @@ export default function VoiceConnection({ children }: { children?: ReactNode }) 
     if (cs === "disconnected") return;
 
     // Unexpected disconnect (LiveKit connection lost after all retries)
+    console.warn("[VoiceConnection] Unexpected disconnect, reason:", reason);
     leaveVoice();
   }, [leaveVoice]);
 
