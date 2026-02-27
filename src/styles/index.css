@@ -684,6 +684,90 @@ body {
   margin-top: 1rem;
 }
 
+.tos-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tos-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blurple);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tos-checkbox a {
+  color: var(--text-link);
+  text-decoration: none;
+}
+
+.tos-checkbox a:hover {
+  text-decoration: underline;
+}
+
+/* ─── Terms of Service page ─────────────────────── */
+
+.terms-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-normal);
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.terms-container {
+  max-width: 800px;
+  width: 100%;
+}
+
+.terms-content {
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.terms-content h1,
+.terms-content h2,
+.terms-content h3 {
+  color: var(--text-primary);
+  margin: 1.5rem 0 0.75rem;
+}
+
+.terms-content p {
+  margin: 0.75rem 0;
+}
+
+.terms-content a {
+  color: var(--text-link);
+}
+
+.terms-content ul,
+.terms-content ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.terms-back {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.terms-back a {
+  color: var(--text-link);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.terms-back a:hover {
+  text-decoration: underline;
+}
+
 .auth-link {
   text-align: center;
   margin-top: 1rem;
@@ -8009,6 +8093,11 @@ em-emoji-picker {
   flex-shrink: 0;
 }
 
+.unread-badge-muted {
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+}
+
 .channel-item.unread .channel-hash,
 .channel-item.unread .channel-type-icon,
 .channel-item.unread {
@@ -8033,8 +8122,8 @@ em-emoji-picker {
   transform: translateY(-50%);
   width: 8px;
   height: 8px;
-  background: var(--text-primary);
-  border-radius: 50%;
+  background: var(--text-normal);
+  border-radius: 4px;
   flex-shrink: 0;
   pointer-events: none;
 }

@@ -328,44 +328,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     ws.on("ReactionAdded", (msg: Extract<WsServerMessage, { type: "ReactionAdded" }>) => {
-      const { message_id, sender_token, emoji } = msg.payload;
-      const myId = useAuthStore.getState().user?.id;
+      const { message_id, user_id, emoji } = msg.payload;
       set((state) => {
         const groups = [...(state.reactions[message_id] ?? [])];
         const existing = groups.find((g) => g.emoji === emoji);
         if (existing) {
-          // If we already optimistically added this with our real user ID,
-          // replace it with sender_token so the data is consistent
-          if (myId && existing.userIds.includes(myId)) {
-            existing.userIds = existing.userIds.map((id) => id === myId ? sender_token : id);
-          } else if (!existing.userIds.includes(sender_token)) {
-            existing.userIds = [...existing.userIds, sender_token];
+          if (!existing.userIds.includes(user_id)) {
+            existing.userIds = [...existing.userIds, user_id];
           }
         } else {
-          groups.push({ emoji, userIds: [sender_token] });
+          groups.push({ emoji, userIds: [user_id] });
         }
         return { reactions: { ...state.reactions, [message_id]: groups } };
       });
     });
 
     ws.on("ReactionRemoved", (msg: Extract<WsServerMessage, { type: "ReactionRemoved" }>) => {
-      const { message_id, sender_token, emoji } = msg.payload;
-      const myId = useAuthStore.getState().user?.id;
+      const { message_id, user_id, emoji } = msg.payload;
       set((state) => {
         const groups = (state.reactions[message_id] ?? [])
           .map((g) => {
             if (g.emoji !== emoji) return g;
-            // If we already optimistically removed our own reaction (myId gone),
-            // this is the echo — remove the sender_token entry instead
-            const hasMyId = myId && g.userIds.includes(myId);
-            const hasSenderToken = g.userIds.includes(sender_token);
-            if (hasSenderToken) {
-              return { ...g, userIds: g.userIds.filter((id) => id !== sender_token) };
-            }
-            // Our optimistic update already removed myId — nothing to do
-            if (!hasMyId) return g;
-            // Fallback: remove myId
-            return { ...g, userIds: g.userIds.filter((id) => id !== myId) };
+            return { ...g, userIds: g.userIds.filter((id) => id !== user_id) };
           })
           .filter((g) => g.userIds.length > 0);
         return { reactions: { ...state.reactions, [message_id]: groups } };
