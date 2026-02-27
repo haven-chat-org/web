@@ -30,6 +30,7 @@ export default function Register() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const register = useAuthStore((s) => s.register);
   const api = useAuthStore((s) => s.api);
   const navigate = useNavigate();
@@ -106,6 +107,10 @@ export default function Register() {
     }
     if (turnstileSiteKey && !turnstileToken) {
       setError(t("register.turnstileError"));
+      return;
+    }
+    if (!tosAccepted) {
+      setError(t("register.tosRequired"));
       return;
     }
 
@@ -199,6 +204,20 @@ export default function Register() {
               required
             />
           </div>
+
+          <label className="tos-checkbox">
+            <input
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={(e) => setTosAccepted(e.target.checked)}
+            />
+            <span>
+              {t("register.tosAgree")}{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer">
+                {t("register.tosLink")}
+              </a>
+            </span>
+          </label>
 
           {turnstileSiteKey && (
             <div className="turnstile-container" ref={turnstileRef} />
