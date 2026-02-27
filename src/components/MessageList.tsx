@@ -333,7 +333,11 @@ export default function MessageList() {
                     <span className="reply-preview-bar" />
                     <span className="reply-preview-sender">{getSenderName(repliedMsg.senderId)}</span>
                     <span className="reply-preview-text">
-                      {repliedMsg.text.length > 80 ? repliedMsg.text.slice(0, 80) + "..." : repliedMsg.text}
+                      {repliedMsg.text
+                        ? (repliedMsg.text.length > 80 ? repliedMsg.text.slice(0, 80) + "..." : repliedMsg.text)
+                        : repliedMsg.attachments?.length
+                          ? t("messageList.replyPreview.attachment")
+                          : ""}
                     </span>
                   </div>
                 )}
