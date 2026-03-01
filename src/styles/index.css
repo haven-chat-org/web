@@ -9950,6 +9950,318 @@ em-emoji-picker {
   font-size: 14px;
 }
 
+/* ── Admin Report Triage ─────────────────────────── */
+
+.admin-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 9px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-reports-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-report-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.admin-report-row:hover {
+  background: var(--bg-secondary);
+}
+
+.admin-report-reporter {
+  font-weight: 500;
+  color: var(--text-header);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.admin-report-reason {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-report-date {
+  color: var(--text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.report-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.status-pending {
+  background: rgba(250, 166, 26, 0.15);
+  color: #faa61a;
+}
+
+.status-reviewed {
+  background: rgba(88, 101, 242, 0.15);
+  color: var(--blurple);
+}
+
+.status-dismissed {
+  background: rgba(128, 128, 128, 0.15);
+  color: var(--text-muted);
+}
+
+.status-escalated {
+  background: rgba(237, 66, 69, 0.15);
+  color: var(--red);
+}
+
+.report-detail {
+  padding: 12px 16px;
+  margin: 4px 0;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-detail-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.report-detail-field p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-normal);
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ── Instance Bans ───────────────────────────────── */
+
+.admin-ban-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.admin-ban-row:hover {
+  background: var(--bg-secondary);
+}
+
+.admin-ban-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-ban-username {
+  font-weight: 500;
+  color: var(--text-header);
+  font-size: 14px;
+}
+
+.admin-ban-reason {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.admin-ban-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.instance-ban-modal {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 24px;
+  width: 420px;
+  max-width: 95vw;
+}
+
+.instance-ban-modal h3 {
+  margin: 0 0 16px;
+  color: var(--text-header);
+  font-size: 18px;
+}
+
+/* ── Blocked Hashes ──────────────────────────────── */
+
+.hash-value {
+  font-family: "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text-header);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Content Filters ─────────────────────────────── */
+
+.filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-form-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-radio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+.filter-radio input[type="radio"] {
+  accent-color: var(--blurple);
+}
+
+.filter-separator {
+  color: var(--text-muted);
+}
+
+.filter-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.filter-pattern {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-normal);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-type-badge,
+.filter-action-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.filter-type-badge.keyword {
+  background: rgba(88, 101, 242, 0.15);
+  color: var(--blurple);
+}
+
+.filter-type-badge.regex {
+  background: rgba(250, 166, 26, 0.15);
+  color: #faa61a;
+}
+
+.filter-action-badge.hide {
+  background: rgba(237, 66, 69, 0.15);
+  color: var(--red);
+}
+
+.filter-action-badge.warn {
+  background: rgba(250, 166, 26, 0.15);
+  color: #faa61a;
+}
+
+/* ── Content Filter Message Overlays ──────────────── */
+
+.content-filter-hidden {
+  position: relative;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.content-filter-reveal {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.content-filter-reveal:hover {
+  color: var(--text-normal);
+  text-decoration: underline;
+}
+
+.content-filter-warn {
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  background: rgba(250, 166, 26, 0.1);
+  border-left: 3px solid #faa61a;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  color: #faa61a;
+}
+
 /* ── Sidebar Group Wrapper (for mobile) ────────── */
 .chat-sidebar-group {
   display: contents; /* desktop: transparent wrapper, children flow in .chat-layout flex */

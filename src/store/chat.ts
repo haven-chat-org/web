@@ -3,6 +3,7 @@ import { getServerUrl } from "../lib/serverUrl";
 import {
   HavenWs,
   encryptFile,
+  hashFile,
   toBase64,
   type ChannelResponse,
   type CategoryResponse,
@@ -12,6 +13,7 @@ import {
   type WsServerMessage,
   type ReactionGroup,
   type CustomEmojiResponse,
+  type ContentFilterResponse,
 } from "@haven-chat-org/core";
 import { useAuthStore } from "./auth.js";
 import { usePresenceStore } from "./presence.js";
@@ -33,6 +35,7 @@ export interface AttachmentMeta {
   width?: number;     // original image width
   height?: number;    // original image height
   spoiler?: boolean;  // true if marked as spoiler (blur until clicked)
+  file_hash?: string; // SHA-256 hash of plaintext file (for known-bad hash matching)
 }
 
 export interface PendingUpload {
@@ -64,6 +67,7 @@ export interface DecryptedMessage {
   edited?: boolean;
   replyToId?: string | null;
   messageType?: string; // "user" | "system"
+  filterAction?: "hide" | "warn" | null;
   raw: MessageResponse;
 }
 
@@ -113,6 +117,8 @@ interface ChatState {
   newMessageDividers: Record<string, number>;
   /** Set to true after initial loadChannels() completes (used by splash screen) */
   dataLoaded: boolean;
+  /** serverId -> content filters for that server */
+  contentFilters: Record<string, ContentFilterResponse[]>;
 
   connect(): void;
   disconnect(): void;
@@ -144,6 +150,8 @@ interface ChatState {
   loadBlockedUsers(): Promise<void>;
   refreshPermissions(serverId: string): Promise<void>;
   navigateUnread(direction: "up" | "down"): void;
+  fetchContentFilters(serverId: string): Promise<void>;
+  checkContentFilter(serverId: string, plaintext: string): { filtered: boolean; action: "hide" | "warn" } | null;
 }
 
 const TYPING_EXPIRY_MS = 3000;
@@ -199,6 +207,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   memberListVersion: 0,
   newMessageDividers: {},
   dataLoaded: false,
+  contentFilters: {},
 
   connect() {
     const { api } = useAuthStore.getState();
@@ -792,6 +801,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Non-fatal: will retry on next message or WS notification
     }
 
+    // Fetch content filters for the channel's server (if not already cached)
+    {
+      const ch = get().channels.find((c) => c.id === channelId);
+      if (ch?.server_id && !get().contentFilters[ch.server_id]) {
+        get().fetchContentFilters(ch.server_id);
+      }
+    }
+
     // Load message history if we haven't already
     if (!get().messages[channelId]) {
       const { api } = useAuthStore.getState();
@@ -824,6 +841,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const msg = await decryptIncoming(raw);
           msg.edited = raw.edited;
           msg.replyToId = raw.reply_to_id;
+          // Apply content filter if the channel belongs to a server
+          const ch = get().channels.find((c) => c.id === raw.channel_id);
+          if (ch?.server_id) {
+            const filterResult = get().checkContentFilter(ch.server_id, msg.text);
+            if (filterResult) msg.filterAction = filterResult.action;
+          }
           cacheMessage(msg);
           decrypted.push(msg);
         } catch (err) {
@@ -993,6 +1016,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       try {
         // 1. Encrypt the file client-side
         const fileBytes = new Uint8Array(await upload.file.arrayBuffer());
+        const fileHash = await hashFile(fileBytes);
         const { encrypted, key, nonce } = encryptFile(fileBytes);
 
         // 2. Upload encrypted blob with progress tracking via XHR
@@ -1005,6 +1029,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const token = api.currentAccessToken;
           xhr.open("POST", `${getServerUrl()}/api/v1/attachments/upload`);
           xhr.setRequestHeader("Content-Type", "application/octet-stream");
+          xhr.setRequestHeader("X-File-Hash", fileHash);
           if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
@@ -1035,6 +1060,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           size: upload.file.size,
           key: toBase64(key),
           nonce: toBase64(nonce),
+          file_hash: fileHash,
         };
 
         // Generate thumbnail for images
@@ -1427,6 +1453,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Non-fatal
     }
   },
+
+  async fetchContentFilters(serverId) {
+    const { api } = useAuthStore.getState();
+    try {
+      const filters = await api.listContentFilters(serverId);
+      set((state) => ({
+        contentFilters: { ...state.contentFilters, [serverId]: filters },
+      }));
+    } catch {
+      // Non-fatal — filters just won't be applied
+    }
+  },
+
+  checkContentFilter(serverId, plaintext) {
+    const filters = get().contentFilters[serverId];
+    if (!filters || filters.length === 0) return null;
+
+    for (const filter of filters) {
+      try {
+        let matches = false;
+        if (filter.filter_type === "regex") {
+          const re = new RegExp(filter.pattern, "i");
+          matches = re.test(plaintext);
+        } else {
+          matches = plaintext.toLowerCase().includes(filter.pattern.toLowerCase());
+        }
+        if (matches) {
+          return { filtered: true, action: filter.action as "hide" | "warn" };
+        }
+      } catch {
+        // Invalid regex — skip
+      }
+    }
+    return null;
+  },
 }));
 
 const MAX_MESSAGES_PER_CHANNEL = 200;
@@ -1590,6 +1651,15 @@ async function handleIncomingMessage(raw: MessageResponse) {
     const msg = await decryptIncoming(raw);
     msg.edited = raw.edited;
     msg.replyToId = raw.reply_to_id;
+    // Apply content filter
+    {
+      const state = useChatStore.getState();
+      const ch = state.channels.find((c) => c.id === raw.channel_id);
+      if (ch?.server_id) {
+        const filterResult = state.checkContentFilter(ch.server_id, msg.text);
+        if (filterResult) msg.filterAction = filterResult.action;
+      }
+    }
     cacheMessage(msg);
     // Clear typing indicator for this sender — they just sent a message
     clearTypingForUser(raw.channel_id, msg.senderId);
