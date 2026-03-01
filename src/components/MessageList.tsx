@@ -17,6 +17,55 @@ import MessageContextMenu from "./MessageContextMenu.js";
 import ReportModal from "./ReportModal.js";
 import type { DecryptedMessage, LinkPreview } from "../store/chat.js";
 
+// ─── Disappearing Message Timer ──────────────────────
+
+function formatTimeRemaining(ms: number): string {
+  if (ms <= 0) return "0s";
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}d`;
+}
+
+function MessageTimer({ expiresAt, channelId, messageId }: { expiresAt: string; channelId: string; messageId: string }) {
+  const [remaining, setRemaining] = useState(() => new Date(expiresAt).getTime() - Date.now());
+  const removeExpiredMessage = useChatStore((s) => s.removeExpiredMessage);
+
+  useEffect(() => {
+    const target = new Date(expiresAt).getTime();
+    const tick = () => {
+      const left = target - Date.now();
+      if (left <= 0) {
+        removeExpiredMessage(channelId, messageId);
+        return;
+      }
+      setRemaining(left);
+    };
+    tick();
+    const ms = target - Date.now();
+    if (ms <= 0) return;
+    // Adaptive interval: fast when close, slow when far
+    const intervalMs = ms < 60_000 ? 1000 : ms < 3_600_000 ? 60_000 : 300_000;
+    const id = setInterval(tick, intervalMs);
+    return () => clearInterval(id);
+  }, [expiresAt, channelId, messageId, removeExpiredMessage]);
+
+  if (remaining <= 0) return null;
+
+  return (
+    <span className={`message-timer${remaining < 60_000 ? " expiring-soon" : ""}`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+      </svg>
+      {formatTimeRemaining(remaining)}
+    </span>
+  );
+}
+
 // ─── Embedded URL Stripping ──────────────────────────
 
 const IMAGE_EXT_RE = /\.(?:gif|png|jpe?g|webp|avif|apng|svg)(?:\?[^\s]*)?$/i;
@@ -45,6 +94,24 @@ function stripEmbeddedImageUrls(text: string, previews?: LinkPreview[]): string 
 }
 
 // ─── Date Divider Helpers ─────────────────────────────
+
+function formatMessageTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  if (msgDate.getTime() === today.getTime()) return time;
+  if (msgDate.getTime() === yesterday.getTime()) return `Yesterday at ${time}`;
+
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const y = String(date.getFullYear()).slice(-2);
+  return `${m}/${d}/${y}, ${time}`;
+}
 
 function formatDateDivider(dateStr: string, t: (key: string) => string): string {
   const date = new Date(dateStr);
@@ -259,6 +326,8 @@ export default function MessageList() {
             else if (data.event === "encryption_disabled") systemContent = t("messageList.system.encryptionDisabled", { name });
             else if (data.event === "export_consent_enabled") systemContent = t("export.consent.enabled", { name });
             else if (data.event === "export_consent_disabled") systemContent = t("export.consent.disabled", { name });
+            else if (data.event === "disappearing_messages_set") systemContent = t("disappearingMessages.timerSet", { name, duration: data.duration });
+            else if (data.event === "disappearing_messages_off") systemContent = t("disappearingMessages.timerOff", { name });
             else systemContent = `${name} — ${data.event}`;
           } catch { /* use raw text */ }
 
@@ -269,9 +338,7 @@ export default function MessageList() {
               <div className="system-message" id={`msg-${msg.id}`}>
                 <span className="system-message-text">{systemContent}</span>
                 <time className="system-message-time" dateTime={new Date(msg.timestamp).toISOString()}>
-                  {new Date(msg.timestamp).toLocaleString([], {
-                    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                  })}
+                  {formatMessageTime(msg.timestamp)}
                 </time>
               </div>
             </Fragment>
@@ -306,9 +373,7 @@ export default function MessageList() {
                   <div className="message-meta">
                     <span className="message-sender">{t("messageList.blockedUser")}</span>
                     <time className="message-time" dateTime={new Date(msg.timestamp).toISOString()}>
-                      {new Date(msg.timestamp).toLocaleString([], {
-                        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                      })}
+                      {formatMessageTime(msg.timestamp)}
                     </time>
                   </div>
                   <div className="message-text">{t("messageList.blockedUserMessage")}</div>
@@ -376,12 +441,7 @@ export default function MessageList() {
                       {senderName}{systemUserIds.has(msg.senderId) && <span className="official-badge">{t("officialBadge")}</span>}
                     </span>
                     <time className="message-time" dateTime={new Date(msg.timestamp).toISOString()}>
-                      {new Date(msg.timestamp).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatMessageTime(msg.timestamp)}
                     </time>
                     {msg.edited && <span className="message-edited">{t("messageList.edited")}</span>}
                     {isPinned && (
@@ -391,6 +451,7 @@ export default function MessageList() {
                         </svg>
                       </span>
                     )}
+                    {msg.expiresAt && <MessageTimer expiresAt={msg.expiresAt} channelId={msg.channelId} messageId={msg.id} />}
                   </div>
                 )}
                 {msg.filterAction === "warn" && (

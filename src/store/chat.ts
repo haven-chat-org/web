@@ -68,6 +68,7 @@ export interface DecryptedMessage {
   replyToId?: string | null;
   messageType?: string; // "user" | "system"
   filterAction?: "hide" | "warn" | null;
+  expiresAt?: string | null;
   raw: MessageResponse;
 }
 
@@ -124,7 +125,7 @@ interface ChatState {
   disconnect(): void;
   loadChannels(): Promise<void>;
   selectChannel(channelId: string): Promise<void>;
-  sendMessage(text: string, attachments?: AttachmentMeta[], formatting?: { contentType: string; data: object }): Promise<void>;
+  sendMessage(text: string, attachments?: AttachmentMeta[], formatting?: { contentType: string; data: object }, expiresAt?: string): Promise<void>;
   sendTyping(): void;
   startDm(targetUsername: string): Promise<ChannelResponse>;
   /** Get or create a DM channel without navigating (no currentChannelId change). */
@@ -152,6 +153,8 @@ interface ChatState {
   navigateUnread(direction: "up" | "down"): void;
   fetchContentFilters(serverId: string): Promise<void>;
   checkContentFilter(serverId: string, plaintext: string): { filtered: boolean; action: "hide" | "warn" } | null;
+  setChannelTtl(channelId: string, messageTtl: number | null): Promise<void>;
+  removeExpiredMessage(channelId: string, messageId: string): void;
 }
 
 const TYPING_EXPIRY_MS = 3000;
@@ -514,6 +517,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
     });
 
+    ws.on("ChannelSettingsUpdated", (msg: Extract<WsServerMessage, { type: "ChannelSettingsUpdated" }>) => {
+      const { channel_id, message_ttl } = msg.payload;
+      set((state) => ({
+        channels: state.channels.map((ch) =>
+          ch.id === channel_id ? { ...ch, message_ttl: message_ttl ?? null } : ch,
+        ),
+      }));
+    });
+
+    ws.on("MessagesExpired", (msg: Extract<WsServerMessage, { type: "MessagesExpired" }>) => {
+      const { channel_id, message_ids } = msg.payload;
+      const idsSet = new Set(message_ids);
+      for (const id of message_ids) uncacheMessage(id);
+      set((state) => {
+        const existing = state.messages[channel_id];
+        if (!existing) return state;
+        return {
+          messages: {
+            ...state.messages,
+            [channel_id]: existing.filter((m) => !idsSet.has(m.id)),
+          },
+        };
+      });
+    });
+
     ws.on("ServerUpdated", () => {
       // Server structure changed (channels/categories) — reload
       get().loadChannels();
@@ -833,6 +861,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             text: sysText,
             timestamp: raw.timestamp,
             messageType: "system",
+            expiresAt: raw.expires_at ?? null,
             raw,
           });
           continue;
@@ -841,6 +870,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const msg = await decryptIncoming(raw);
           msg.edited = raw.edited;
           msg.replyToId = raw.reply_to_id;
+          msg.expiresAt = raw.expires_at ?? null;
           // Apply content filter if the channel belongs to a server
           const ch = get().channels.find((c) => c.id === raw.channel_id);
           if (ch?.server_id) {
@@ -898,7 +928,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().loadPins(channelId);
   },
 
-  async sendMessage(text, attachments, formatting) {
+  async sendMessage(text, attachments, formatting, expiresAt) {
     const { currentChannelId, ws, replyingToId } = get();
     if (!currentChannelId || !ws) return;
 
@@ -935,6 +965,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         channelEncrypted,
       );
 
+      // Compute effective expiresAt: explicit override > channel default > none
+      const effectiveExpiresAt = expiresAt
+        ?? (channel?.message_ttl
+          ? new Date(Date.now() + channel.message_ttl * 1000).toISOString()
+          : undefined);
+
       // Optimistic insert: show our own message immediately (plaintext)
       const tempId = `temp-${crypto.randomUUID()}`;
       pendingAcks.push(tempId);
@@ -950,12 +986,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         formatting: formatting?.data,
         timestamp: new Date().toISOString(),
         replyToId: replyingToId,
+        expiresAt: effectiveExpiresAt ?? null,
         raw: {} as MessageResponse, // placeholder — replaced on ack
       };
       set((state) => appendMessage(state, currentChannelId, optimistic));
 
       const attachmentIds = attachments?.map((a) => a.id);
-      ws.sendMessage(currentChannelId, senderToken, encryptedBody, undefined, attachmentIds, replyingToId ?? undefined);
+      ws.sendMessage(currentChannelId, senderToken, encryptedBody, effectiveExpiresAt, attachmentIds, replyingToId ?? undefined);
 
       // Clear reply state after send
       set({ replyingToId: null });
@@ -1488,6 +1525,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     return null;
   },
+
+  async setChannelTtl(channelId, messageTtl) {
+    const { api } = useAuthStore.getState();
+    try {
+      await api.setChannelTtl(channelId, messageTtl);
+      // Optimistically update local state (server also broadcasts ChannelSettingsUpdated)
+      set((state) => ({
+        channels: state.channels.map((ch) =>
+          ch.id === channelId ? { ...ch, message_ttl: messageTtl } : ch,
+        ),
+      }));
+    } catch (err) {
+      console.error("[setChannelTtl] Failed:", err);
+    }
+  },
+
+  removeExpiredMessage(channelId, messageId) {
+    uncacheMessage(messageId);
+    set((state) => {
+      const existing = state.messages[channelId];
+      if (!existing) return state;
+      return {
+        messages: {
+          ...state.messages,
+          [channelId]: existing.filter((m) => m.id !== messageId),
+        },
+      };
+    });
+  },
 }));
 
 const MAX_MESSAGES_PER_CHANNEL = 200;
@@ -1641,6 +1707,7 @@ async function handleIncomingMessage(raw: MessageResponse) {
       text: sysText,
       timestamp: raw.timestamp,
       messageType: "system",
+      expiresAt: raw.expires_at ?? null,
       raw,
     };
     useChatStore.setState((state) => appendMessage(state, raw.channel_id, msg));
@@ -1651,6 +1718,7 @@ async function handleIncomingMessage(raw: MessageResponse) {
     const msg = await decryptIncoming(raw);
     msg.edited = raw.edited;
     msg.replyToId = raw.reply_to_id;
+    msg.expiresAt = raw.expires_at ?? null;
     // Apply content filter
     {
       const state = useChatStore.getState();

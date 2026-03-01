@@ -21,6 +21,7 @@ interface CachedMsg {
   lp?: unknown[]; // linkPreviews
   ct?: string; // contentType
   fmt?: unknown; // formatting
+  ea?: string; // expiresAt
 }
 
 type Cache = Record<string, CachedMsg>;
@@ -77,6 +78,7 @@ export function cacheMessage(msg: DecryptedMessage): void {
     ...(msg.linkPreviews?.length ? { lp: msg.linkPreviews } : {}),
     ...(msg.contentType ? { ct: msg.contentType } : {}),
     ...(msg.formatting ? { fmt: msg.formatting } : {}),
+    ...(msg.expiresAt ? { ea: msg.expiresAt } : {}),
   };
   persistCache();
 
@@ -97,6 +99,12 @@ export function getCachedMessage(
   if (!cached) return null;
   // Reject if the cached message belongs to a different channel
   if (cached.ch && cached.ch !== channelId) return null;
+  // Skip expired messages
+  if (cached.ea && new Date(cached.ea).getTime() <= Date.now()) {
+    delete cache[messageId];
+    persistCache();
+    return null;
+  }
 
   return {
     id: messageId,
@@ -107,6 +115,7 @@ export function getCachedMessage(
     linkPreviews: cached.lp as DecryptedMessage["linkPreviews"],
     contentType: cached.ct,
     formatting: cached.fmt as object | undefined,
+    expiresAt: cached.ea,
     timestamp,
     edited,
     raw: raw as DecryptedMessage["raw"],

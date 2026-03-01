@@ -2904,10 +2904,10 @@ body {
 }
 
 .send-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  margin: 0 6px 6px 0;
+  margin: 0 8px 8px 2px;
   align-self: center;
   background: var(--blurple);
   border: none;
@@ -2918,6 +2918,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
+  margin-top: 6px;
 }
 
 .send-btn:hover {
@@ -4205,7 +4206,7 @@ em-emoji-picker {
 
 /* Emoji button in message input */
 .emoji-trigger-btn {
-  width: 44px;
+  width: 28px;
   height: 44px;
   flex-shrink: 0;
   background: transparent;
@@ -4217,6 +4218,7 @@ em-emoji-picker {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: -3px;
 }
 
 .emoji-trigger-btn:hover {
@@ -4228,6 +4230,124 @@ em-emoji-picker {
   display: flex;
   align-items: center;
   align-self: center;
+}
+
+/* ─── Disappearing Message Timer ────────────────── */
+
+.timer-trigger-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: center;
+}
+
+.timer-trigger-btn {
+  width: 28px;
+  height: 44px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--interactive-normal);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.timer-trigger-btn:hover {
+  color: var(--interactive-hover);
+}
+
+.timer-trigger-btn.active {
+  color: var(--blurple);
+}
+
+.timer-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--blurple);
+  background: var(--bg-primary);
+  border-radius: 3px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.timer-picker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-floating);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  min-width: 180px;
+  z-index: 100;
+}
+
+.timer-picker-header {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.timer-picker-description {
+  padding: 2px 12px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--bg-modifier-accent);
+  margin-bottom: 4px;
+}
+
+.timer-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-normal);
+  font-size: 14px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.timer-picker-option:hover {
+  background: var(--bg-modifier-hover);
+}
+
+.timer-picker-option.selected {
+  color: var(--blurple);
+}
+
+/* Timer indicator on messages */
+.message-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 6px;
+  vertical-align: baseline;
+}
+
+.message-timer svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+}
+
+.message-timer.expiring-soon {
+  color: var(--status-danger);
 }
 
 /* ─── GIF Picker ──────────────────────────────── */
@@ -8170,6 +8290,24 @@ em-emoji-picker {
   flex-shrink: 1;
   border-left: 1px solid var(--border-color);
   padding-left: 12px;
+}
+
+.chat-header-ttl {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  color: var(--text-muted);
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.chat-header-ttl svg {
+  opacity: 0.7;
+}
+
+.chat-header-ttl:hover svg {
+  opacity: 1;
+  color: var(--blurple);
 }
 
 /* ─── Member Username (nickname) ───────────────────── */
