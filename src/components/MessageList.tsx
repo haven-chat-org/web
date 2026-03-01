@@ -73,6 +73,25 @@ function isDifferentDay(a: string, b: string): boolean {
   );
 }
 
+// ─── Content Filter Wrapper ───────────────────────────
+
+function ContentFilterWrapper({ filterAction, children }: { filterAction?: "hide" | "warn" | null; children: React.ReactNode }) {
+  const { t } = useTranslation();
+  const [revealed, setRevealed] = useState(false);
+
+  if (filterAction !== "hide" || revealed) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="content-filter-hidden">
+      <button className="content-filter-reveal" onClick={() => setRevealed(true)}>
+        {t("messageList.contentFilter.clickToReveal")}
+      </button>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────
 
 export default function MessageList() {
@@ -374,22 +393,27 @@ export default function MessageList() {
                     )}
                   </div>
                 )}
-                {msg.contentType === "server_invite" && msg.formatting ? (
-                  <InviteCard invite={msg.formatting as { invite_code: string; server_name: string; server_id: string; server_icon_url?: string | null }} senderId={msg.senderId} />
-                ) : (() => {
-                  const displayText = stripEmbeddedImageUrls(msg.text, msg.linkPreviews);
-                  return displayText ? <MessageBody text={displayText} contentType={msg.contentType} formatting={msg.formatting} customEmojiMap={customEmojiMap} /> : null;
-                })()}
-                {msg.attachments && msg.attachments.length > 0 && (
-                  <MessageAttachments attachments={msg.attachments} />
+                {msg.filterAction === "warn" && (
+                  <div className="content-filter-warn">{t("messageList.contentFilter.warning")}</div>
                 )}
-                {msg.linkPreviews && msg.linkPreviews.length > 0 && (
-                  <div className="link-preview-list">
-                    {msg.linkPreviews.map((lp) => (
-                      <LinkPreviewCard key={lp.url} preview={lp} />
-                    ))}
-                  </div>
-                )}
+                <ContentFilterWrapper filterAction={msg.filterAction}>
+                  {msg.contentType === "server_invite" && msg.formatting ? (
+                    <InviteCard invite={msg.formatting as { invite_code: string; server_name: string; server_id: string; server_icon_url?: string | null }} senderId={msg.senderId} />
+                  ) : (() => {
+                    const displayText = stripEmbeddedImageUrls(msg.text, msg.linkPreviews);
+                    return displayText ? <MessageBody text={displayText} contentType={msg.contentType} formatting={msg.formatting} customEmojiMap={customEmojiMap} /> : null;
+                  })()}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <MessageAttachments attachments={msg.attachments} />
+                  )}
+                  {msg.linkPreviews && msg.linkPreviews.length > 0 && (
+                    <div className="link-preview-list">
+                      {msg.linkPreviews.map((lp) => (
+                        <LinkPreviewCard key={lp.url} preview={lp} />
+                      ))}
+                    </div>
+                  )}
+                </ContentFilterWrapper>
                 {msgReactions.length > 0 && (
                   <div className="reaction-pills">
                     {msgReactions.map((r) => {
