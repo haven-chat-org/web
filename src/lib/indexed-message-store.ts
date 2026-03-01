@@ -22,6 +22,7 @@ interface StoredMessage {
   contentType?: string;
   formatting?: unknown;
   edited?: boolean;
+  expiresAt?: string;
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -61,6 +62,7 @@ function toStored(msg: DecryptedMessage): StoredMessage {
     ...(msg.contentType ? { contentType: msg.contentType } : {}),
     ...(msg.formatting ? { formatting: msg.formatting as unknown } : {}),
     ...(msg.edited ? { edited: true } : {}),
+    ...(msg.expiresAt ? { expiresAt: msg.expiresAt } : {}),
   };
 }
 
@@ -76,6 +78,7 @@ function fromStored(stored: StoredMessage, raw?: unknown): DecryptedMessage {
     contentType: stored.contentType,
     formatting: stored.formatting as object | undefined,
     edited: stored.edited ?? false,
+    expiresAt: stored.expiresAt,
     raw: raw as DecryptedMessage["raw"],
   };
 }
@@ -132,10 +135,15 @@ export async function idbGetChannelMessages(
       const index = tx.objectStore(STORE_NAME).index("by-channel");
       const results: DecryptedMessage[] = [];
       const req = index.openCursor(IDBKeyRange.only(channelId), "prev");
+      const now = Date.now();
       req.onsuccess = () => {
         const cursor = req.result;
         if (cursor && results.length < limit) {
-          results.push(fromStored(cursor.value as StoredMessage));
+          const stored = cursor.value as StoredMessage;
+          // Skip expired messages from cache
+          if (!stored.expiresAt || new Date(stored.expiresAt).getTime() > now) {
+            results.push(fromStored(stored));
+          }
           cursor.continue();
         } else {
           resolve(results.reverse());

@@ -59,6 +59,67 @@ interface MessageInputProps {
   placeholder?: string;
 }
 
+// ─── Disappearing Message Timer ──────────────────────────
+
+const TIMER_OPTIONS: { label: string; value: number | null }[] = [
+  { label: "Off", value: null },
+  { label: "30 seconds", value: 30 },
+  { label: "5 minutes", value: 300 },
+  { label: "1 hour", value: 3600 },
+  { label: "8 hours", value: 28800 },
+  { label: "1 day", value: 86400 },
+  { label: "1 week", value: 604800 },
+];
+
+function formatTimerBadge(seconds: number): string {
+  if (seconds >= 604800) return `${Math.floor(seconds / 604800)}w`;
+  if (seconds >= 86400) return `${Math.floor(seconds / 86400)}d`;
+  if (seconds >= 3600) return `${Math.floor(seconds / 3600)}h`;
+  if (seconds >= 60) return `${Math.floor(seconds / 60)}m`;
+  return `${seconds}s`;
+}
+
+function TimerPicker({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: number | null;
+  onChange: (val: number | null) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  return (
+    <div className="timer-picker" ref={ref}>
+      <div className="timer-picker-header">{t("disappearingMessages.title")}</div>
+      <div className="timer-picker-description">{t("disappearingMessages.description")}</div>
+      {TIMER_OPTIONS.map((opt) => (
+        <button
+          key={opt.label}
+          type="button"
+          className={`timer-picker-option${value === opt.value ? " selected" : ""}`}
+          onClick={() => onChange(opt.value)}
+        >
+          <span>{opt.label}</span>
+          {value === opt.value && (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Create mention/suggestion extensions once (stable references)
 const memberListRef = { current: [] as MemberItem[] };
 const channelListRef = { current: [] as ChannelItem[] };
@@ -73,6 +134,8 @@ export default function MessageInput({ placeholder }: MessageInputProps) {
   const [sending, setSending] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [gifOpen, setGifOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
+  const setChannelTtl = useChatStore((s) => s.setChannelTtl);
   const [charCount, setCharCount] = useState(0);
   const [inputCtx, setInputCtx] = useState<{ x: number; y: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +160,7 @@ export default function MessageInput({ placeholder }: MessageInputProps) {
   const channels = useChatStore((s) => s.channels);
   const customEmojis = useChatStore((s) => s.customEmojis);
   const selectedServerId = useUiStore((s) => s.selectedServerId);
+  const currentChannel = channels.find((c) => c.id === currentChannelId2);
   const showSendButton = useUiStore((s) => s.showSendButton);
   const setShowSendButton = useUiStore((s) => s.setShowSendButton);
   const spellcheck = useUiStore((s) => s.spellcheck);
@@ -569,6 +633,32 @@ export default function MessageInput({ placeholder }: MessageInputProps) {
             />
           )}
         </div>
+        {(!currentChannel?.server_id || can(Permission.MANAGE_CHANNELS)) && <div className="timer-trigger-wrap">
+          <button
+            type="button"
+            className={`timer-trigger-btn${currentChannel?.message_ttl ? " active" : ""}`}
+            onClick={() => { setTimerOpen(!timerOpen); if (!timerOpen) { setEmojiOpen(false); setGifOpen(false); } }}
+            title={t("messageInput.timerTitle")}
+            aria-label={t("messageInput.timerAriaLabel")}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+            </svg>
+            {currentChannel?.message_ttl && (
+              <span className="timer-badge">{formatTimerBadge(currentChannel.message_ttl)}</span>
+            )}
+          </button>
+          {timerOpen && (
+            <TimerPicker
+              value={currentChannel?.message_ttl ?? null}
+              onChange={(val) => {
+                if (currentChannelId2) setChannelTtl(currentChannelId2, val);
+                setTimerOpen(false);
+              }}
+              onClose={() => setTimerOpen(false)}
+            />
+          )}
+        </div>}
         {showSendButton && (
           <button
             type="button"
@@ -577,7 +667,7 @@ export default function MessageInput({ placeholder }: MessageInputProps) {
             title={t("messageInput.sendTitle")}
             aria-label={t("messageInput.sendAriaLabel")}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
           </button>
         )}
         {editor && (
