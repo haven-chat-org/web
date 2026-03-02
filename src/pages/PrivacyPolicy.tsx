@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import DOMPurify from "dompurify";
 
 /**
- * Terms of Service page.
- * Paste your Termly-generated HTML into the TOS_HTML constant below.
+ * Privacy Policy page.
+ * Paste your Termly-generated HTML into the PRIVACY_HTML constant below.
  */
-const TOS_HTML = `
+const PRIVACY_HTML = `
 <style>
   [data-custom-class='body'], [data-custom-class='body'] * {
           background: transparent !important;
@@ -64,13 +64,13 @@ word-break: break-word !important;
       <br><div><span data-custom-class='body_text'>This Privacy Policy was created using Termly's </span><a href="https://termly.io/products/privacy-policy-generator/" target="_blank" rel="noopener external" data-custom-class='link'>Privacy Policy Generator</a></div>
 `;
 
-export default function Terms() {
-  const sanitized = useMemo(() => ({ __html: DOMPurify.sanitize(TOS_HTML) }), []);
+export default function PrivacyPolicy() {
+  const sanitized = useMemo(() => ({ __html: DOMPurify.sanitize(PRIVACY_HTML) }), []);
 
   return (
     <div className="terms-page">
       <div className="terms-container">
-        {/* Static TOS content sanitized via DOMPurify — not user-supplied input */}
+        {/* Static privacy policy content sanitized via DOMPurify — not user-supplied input */}
         <div className="terms-content" dangerouslySetInnerHTML={sanitized} />
         <div className="terms-back">
           <Link to="/register">&larr; Back to Registration</Link>

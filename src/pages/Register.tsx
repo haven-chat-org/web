@@ -31,6 +31,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const register = useAuthStore((s) => s.register);
   const api = useAuthStore((s) => s.api);
   const navigate = useNavigate();
@@ -109,7 +110,7 @@ export default function Register() {
       setError(t("register.turnstileError"));
       return;
     }
-    if (!tosAccepted) {
+    if (!tosAccepted || !privacyAccepted) {
       setError(t("register.tosRequired"));
       return;
     }
@@ -213,8 +214,22 @@ export default function Register() {
             />
             <span>
               {t("register.tosAgree")}{" "}
-              <a href="/terms" target="_blank" rel="noopener noreferrer">
+              <a href="/tos" target="_blank" rel="noopener noreferrer">
                 {t("register.tosLink")}
+              </a>
+            </span>
+          </label>
+
+          <label className="tos-checkbox">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+            />
+            <span>
+              {t("register.tosAgree")}{" "}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer">
+                {t("register.privacyLink")}
               </a>
             </span>
           </label>

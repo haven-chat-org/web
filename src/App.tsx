@@ -9,7 +9,8 @@ import Login from "./pages/Login.js";
 import Register from "./pages/Register.js";
 import ServerConnect from "./pages/ServerConnect.js";
 import Chat from "./pages/Chat.js";
-import Terms from "./pages/Terms.js";
+import PrivacyPolicy from "./pages/PrivacyPolicy.js";
+import Tos from "./pages/Tos.js";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
@@ -77,7 +78,8 @@ export default function App() {
       <Route path="/connect" element={<ServerConnect />} />
       <Route path="/login" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/register" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Register />} />
-      <Route path="/terms" element={<Terms />} />
+      <Route path="/tos" element={<Tos />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route
         path="/*"
         element={
