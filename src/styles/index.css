@@ -818,17 +818,23 @@ body {
   right: -3px;
 }
 
-/* ─── Tauri Title Bar Drag Region ────────────────── */
-/* macOS overlay title bar: the top strip acts as a drag handle */
+/* ─── Tauri Desktop Shell ───────────────────────── */
+/* macOS overlay title bar: push content below traffic lights */
+html[data-tauri] body {
+  padding-top: 28px;
+}
+
+/* Extra drag region next to macOS traffic lights */
 .titlebar-drag-region {
-  height: env(titlebar-area-height, 0px);
+  height: 28px;
   position: fixed;
   top: 0;
-  left: env(titlebar-area-x, 0px);
+  left: 0;
   right: 0;
   z-index: 9999;
   -webkit-app-region: drag;
   app-region: drag;
+  pointer-events: none;
 }
 
 /* ─── Server Bar (far left, 72px) ────────────────── */
