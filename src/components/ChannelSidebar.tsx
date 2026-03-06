@@ -35,7 +35,7 @@ import {
   useDroppable,
   useSensors,
   useSensor,
-  PointerSensor,
+  PointerSensor as DndPointerSensor,
   closestCenter,
   type DragStartEvent,
   type DragEndEvent,
@@ -49,6 +49,20 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+/** PointerSensor that ignores right-click so context menus don't trigger drag. */
+class PointerSensor extends DndPointerSensor {
+  static activators = [
+    {
+      eventName: "onPointerDown" as const,
+      handler: (...args: Parameters<(typeof DndPointerSensor.activators)[0]["handler"]>) => {
+        const [{ nativeEvent }] = args;
+        if (nativeEvent.button === 2) return false;
+        return DndPointerSensor.activators[0].handler(...args);
+      },
+    },
+  ];
+}
 
 export default function ChannelSidebar() {
   const { t } = useTranslation();
