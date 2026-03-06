@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { needsServerUrl } from "./lib/serverUrl";
+import { isTauri } from "./lib/tauriEnv";
 import { useAuthStore } from "./store/auth.js";
 import { useUiStore } from "./store/ui.js";
 import { sanitizeCss } from "./lib/sanitize-css.js";
@@ -29,6 +30,8 @@ function useA11yAttributes() {
   useEffect(() => {
     const el = document.documentElement;
     el.setAttribute("data-theme", theme);
+
+    if (isTauri()) el.setAttribute("data-tauri", "");
 
     if (reducedMotion) el.setAttribute("data-reduced-motion", "");
     else el.removeAttribute("data-reduced-motion");
@@ -74,21 +77,24 @@ export default function App() {
   const connectRequired = needsServerUrl();
 
   return (
-    <Routes>
-      <Route path="/connect" element={<ServerConnect />} />
-      <Route path="/login" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Register />} />
-      <Route path="/tos" element={<Tos />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route
-        path="/*"
-        element={
-          connectRequired ? <Navigate to="/connect" replace /> :
-          <RequireAuth>
-            <Chat />
-          </RequireAuth>
-        }
-      />
-    </Routes>
+    <>
+      {isTauri() && <div className="titlebar-drag-region" data-tauri-drag-region />}
+      <Routes>
+        <Route path="/connect" element={<ServerConnect />} />
+        <Route path="/login" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/register" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Register />} />
+        <Route path="/tos" element={<Tos />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route
+          path="/*"
+          element={
+            connectRequired ? <Navigate to="/connect" replace /> :
+            <RequireAuth>
+              <Chat />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </>
   );
 }
