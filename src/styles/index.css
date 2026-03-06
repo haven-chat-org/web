@@ -834,7 +834,6 @@ html[data-tauri] body {
   z-index: 9999;
   -webkit-app-region: drag;
   app-region: drag;
-  pointer-events: none;
 }
 
 /* ─── Server Bar (far left, 72px) ────────────────── */
