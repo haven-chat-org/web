@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   VideoTrack,
@@ -160,13 +160,20 @@ function RoomContent({ channelName, channelId, serverId, isMuted, isDeafened }: 
     localParticipant.setMicrophoneEnabled(!isMuted);
   }, [isMuted, localParticipant]);
 
-  // Apply per-user volume to remote participants
+  // Apply per-user volume to remote participants (debounced to avoid
+  // overwhelming LiveKit internals when the slider fires onChange rapidly)
+  const remoteParticipantsRef = useRef(remoteParticipants);
+  remoteParticipantsRef.current = remoteParticipants;
+
   useEffect(() => {
-    for (const rp of remoteParticipants) {
-      const vol = userVolumes[rp.identity] ?? 100;
-      rp.setVolume(vol / 100);
-    }
-  }, [remoteParticipants, userVolumes]);
+    const timer = setTimeout(() => {
+      for (const rp of remoteParticipantsRef.current) {
+        const vol = userVolumes[rp.identity] ?? 100;
+        rp.setVolume(vol / 100);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [userVolumes]);
 
   // Detect when screen share stops externally (browser "Stop sharing" button)
   useEffect(() => {
