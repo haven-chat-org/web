@@ -7,12 +7,13 @@ import {
   useTracks,
   useIsSpeaking,
 } from "@livekit/components-react";
-import { Track, ScreenSharePresets, VideoPreset, type Participant } from "livekit-client";
+import { Track, ScreenSharePresets, VideoPreset, RemoteAudioTrack, type Participant } from "livekit-client";
 import type { TrackReference } from "@livekit/components-core";
 import { useVoiceStore, type ScreenShareQuality } from "../store/voice.js";
 import { useAuthStore } from "../store/auth.js";
 import Avatar from "./Avatar.js";
 import VoiceContextMenu from "./VoiceContextMenu.js";
+import { useContextMenuPosition } from "../hooks/useContextMenuPosition.js";
 
 const SCREEN_SHARE_PRESET_MAP: Record<ScreenShareQuality, VideoPreset> = {
   "360p": ScreenSharePresets.h360fps15,
@@ -128,7 +129,7 @@ function RoomContent({ channelName, channelId, serverId, isMuted, isDeafened }: 
   const { localParticipant } = useLocalParticipant();
   const remoteParticipants = useRemoteParticipants();
   const {
-    toggleMute, toggleDeafen, leaveVoice, participants, userVolumes,
+    toggleMute, toggleDeafen, leaveVoice, participants, userVolumes, screenShareVolumes,
     screenSharePreset, setScreenSharePreset, isScreenSharing, setIsScreenSharing,
   } = useVoiceStore();
   const user = useAuthStore((s) => s.user);
@@ -160,20 +161,28 @@ function RoomContent({ channelName, channelId, serverId, isMuted, isDeafened }: 
     localParticipant.setMicrophoneEnabled(!isMuted);
   }, [isMuted, localParticipant]);
 
-  // Apply per-user volume to remote participants (debounced to avoid
-  // overwhelming LiveKit internals when the slider fires onChange rapidly)
+  // Apply per-user mic and screen share volumes independently (debounced to
+  // avoid overwhelming LiveKit internals when the slider fires onChange rapidly)
   const remoteParticipantsRef = useRef(remoteParticipants);
   remoteParticipantsRef.current = remoteParticipants;
 
   useEffect(() => {
     const timer = setTimeout(() => {
       for (const rp of remoteParticipantsRef.current) {
-        const vol = userVolumes[rp.identity] ?? 100;
-        rp.setVolume(vol / 100);
+        const micVol = userVolumes[rp.identity] ?? 100;
+        const ssVol = screenShareVolumes[rp.identity] ?? 100;
+        for (const pub of rp.trackPublications.values()) {
+          if (!pub.track || pub.track.kind !== Track.Kind.Audio) continue;
+          if (pub.source === Track.Source.ScreenShareAudio) {
+            (pub.track as RemoteAudioTrack).setVolume(ssVol / 100);
+          } else if (pub.source === Track.Source.Microphone) {
+            (pub.track as RemoteAudioTrack).setVolume(micVol / 100);
+          }
+        }
       }
     }, 50);
     return () => clearTimeout(timer);
-  }, [userVolumes]);
+  }, [userVolumes, screenShareVolumes]);
 
   // Detect when screen share stops externally (browser "Stop sharing" button)
   useEffect(() => {
@@ -398,19 +407,53 @@ interface ScreenShareViewProps {
 function ScreenShareView({ tracks, focusedIndex, onFocusChange }: ScreenShareViewProps) {
   const { t } = useTranslation();
   const focused = tracks[focusedIndex];
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }
+
+  function toggleFullscreen() {
+    if (!mainRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      mainRef.current.requestFullscreen();
+    }
+  }
 
   return (
     <div className="screen-share-view">
-      <div className="screen-share-main">
+      <div className="screen-share-main" ref={mainRef} onContextMenu={handleContextMenu}>
         {focused && (
           <>
             <VideoTrack trackRef={focused} />
             <div className="screen-share-label">
               {t("voiceRoom.screenLabel", { name: focused.participant.name || focused.participant.identity })}
             </div>
+            <button
+              className="screen-share-fullscreen-btn"
+              onClick={toggleFullscreen}
+              title={t("voiceRoom.fullscreen")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+              </svg>
+            </button>
           </>
         )}
       </div>
+      {contextMenu && focused && (
+        <ScreenShareContextMenu
+          participant={focused.participant}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+          onFullscreen={toggleFullscreen}
+        />
+      )}
       {tracks.length > 1 && (
         <div className="screen-share-strip">
           {tracks.map((tr, i) => (
@@ -499,6 +542,91 @@ function ParticipantTile({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Screen Share Context Menu ───
+
+interface ScreenShareContextMenuProps {
+  participant: Participant;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onFullscreen: () => void;
+}
+
+function ScreenShareContextMenu({ participant, position, onClose, onFullscreen }: ScreenShareContextMenuProps) {
+  const { t } = useTranslation();
+  const { screenShareVolumes, setScreenShareVolume } = useVoiceStore();
+  const ref = useRef<HTMLDivElement>(null);
+  const volume = screenShareVolumes[participant.identity] ?? 100;
+  const isMuted = volume === 0;
+  const prevVolumeRef = useRef(volume || 100);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [onClose]);
+
+  const style = useContextMenuPosition(ref, position.x, position.y);
+
+  function toggleMute() {
+    if (isMuted) {
+      setScreenShareVolume(participant.identity, prevVolumeRef.current > 0 ? prevVolumeRef.current : 100);
+    } else {
+      prevVolumeRef.current = volume;
+      setScreenShareVolume(participant.identity, 0);
+    }
+  }
+
+  const isRemote = !participant.isLocal;
+  const isFullscreen = !!document.fullscreenElement;
+
+  return (
+    <div className="user-context-menu" ref={ref} style={style} role="menu">
+      <button
+        className="user-context-item"
+        role="menuitem"
+        tabIndex={-1}
+        onClick={() => { onFullscreen(); onClose(); }}
+      >
+        {isFullscreen ? t("voiceRoom.exitFullscreen") : t("voiceRoom.fullscreen")}
+      </button>
+      {isRemote && (
+        <>
+          <div className="user-context-divider" role="separator" />
+          <button className="user-context-item" role="menuitem" tabIndex={-1} onClick={toggleMute}>
+            {isMuted ? t("voiceContext.unmute") : t("voiceContext.mute")}
+          </button>
+          <div className="user-context-divider" role="separator" />
+          <div className="context-volume-section">
+            <span className="context-volume-label">{t("voiceContext.userVolume")}</span>
+            <div className="context-volume-slider-row">
+              <input
+                type="range"
+                className="context-volume-slider"
+                min={0}
+                max={200}
+                value={volume}
+                onChange={(e) => setScreenShareVolume(participant.identity, Number(e.target.value))}
+                onMouseDown={(e) => e.stopPropagation()}
+                aria-label={t("voiceContext.userVolumeAriaLabel")}
+              />
+              <span className="context-volume-value">{volume}%</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

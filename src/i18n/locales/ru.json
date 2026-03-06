@@ -1349,6 +1349,8 @@
   "voiceRoom.connecting": "Подключение...",
   "voiceRoom.deafen": "Заглушить",
   "voiceRoom.disconnect": "Отключиться",
+  "voiceRoom.exitFullscreen": "Выйти из полноэкранного режима",
+  "voiceRoom.fullscreen": "Полноэкранный режим",
   "voiceRoom.joinVoice": "Войти в голосовой",
   "voiceRoom.mute": "Выключить микрофон",
   "voiceRoom.mutedAriaLabel": "Микрофон выключен",
