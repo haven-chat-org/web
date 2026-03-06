@@ -31,8 +31,11 @@ interface VoiceState extends VoiceSettings {
   // Remote participants (by channel_id)
   participants: Record<string, VoiceParticipant[]>;
 
-  /** Per-user volume overrides (userId -> 0–200, default 100) */
+  /** Per-user mic volume overrides (userId -> 0–200, default 100) */
   userVolumes: Record<string, number>;
+
+  /** Per-user screen share volume overrides (userId -> 0–200, default 100) */
+  screenShareVolumes: Record<string, number>;
 
   // Screen share
   isScreenSharing: boolean;
@@ -55,6 +58,7 @@ interface VoiceState extends VoiceSettings {
   setEchoCancellation(v: boolean): void;
   setNoiseSuppression(v: boolean): void;
   setUserVolume(userId: string, volume: number): void;
+  setScreenShareVolume(userId: string, volume: number): void;
 
   // WS event handler
   handleVoiceStateUpdate(
@@ -113,6 +117,7 @@ export const useVoiceStore = create<VoiceState>()(
 
       // Per-user volume (persisted)
       userVolumes: {},
+      screenShareVolumes: {},
 
       // Screen share
       isScreenSharing: false,
@@ -215,6 +220,11 @@ export const useVoiceStore = create<VoiceState>()(
       setUserVolume(userId, volume) {
         set((s) => ({
           userVolumes: { ...s.userVolumes, [userId]: volume },
+        }));
+      },
+      setScreenShareVolume(userId, volume) {
+        set((s) => ({
+          screenShareVolumes: { ...s.screenShareVolumes, [userId]: volume },
         }));
       },
       setScreenSharePreset(preset) {
@@ -373,6 +383,7 @@ export const useVoiceStore = create<VoiceState>()(
         echoCancellation: state.echoCancellation,
         noiseSuppression: state.noiseSuppression,
         userVolumes: state.userVolumes,
+        screenShareVolumes: state.screenShareVolumes,
         screenSharePreset: state.screenSharePreset,
       }),
     },

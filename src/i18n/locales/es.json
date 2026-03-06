@@ -1349,6 +1349,8 @@
   "voiceRoom.connecting": "Conectando...",
   "voiceRoom.deafen": "Ensordecer",
   "voiceRoom.disconnect": "Desconectar",
+  "voiceRoom.exitFullscreen": "Salir de pantalla completa",
+  "voiceRoom.fullscreen": "Pantalla completa",
   "voiceRoom.joinVoice": "Unirse a voz",
   "voiceRoom.mute": "Silenciar",
   "voiceRoom.mutedAriaLabel": "Silenciado",

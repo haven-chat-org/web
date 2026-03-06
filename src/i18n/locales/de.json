@@ -1349,6 +1349,8 @@
   "voiceRoom.connecting": "Verbindung wird hergestellt...",
   "voiceRoom.deafen": "Taubstellen",
   "voiceRoom.disconnect": "Trennen",
+  "voiceRoom.exitFullscreen": "Vollbild beenden",
+  "voiceRoom.fullscreen": "Vollbild",
   "voiceRoom.joinVoice": "Sprachkanal beitreten",
   "voiceRoom.mute": "Stummschalten",
   "voiceRoom.mutedAriaLabel": "Stummgeschaltet",

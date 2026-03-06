@@ -1194,6 +1194,8 @@
   "voiceRoom.connecting": "Connecting...",
   "voiceRoom.deafen": "Deafen",
   "voiceRoom.disconnect": "Disconnect",
+  "voiceRoom.exitFullscreen": "Exit Fullscreen",
+  "voiceRoom.fullscreen": "Fullscreen",
   "voiceRoom.joinVoice": "Join Voice",
   "voiceRoom.mute": "Mute",
   "voiceRoom.mutedAriaLabel": "Muted",

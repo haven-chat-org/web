@@ -1349,6 +1349,8 @@
   "voiceRoom.connecting": "接続中...",
   "voiceRoom.deafen": "スピーカーミュート",
   "voiceRoom.disconnect": "切断",
+  "voiceRoom.exitFullscreen": "全画面表示を終了",
+  "voiceRoom.fullscreen": "全画面表示",
   "voiceRoom.joinVoice": "ボイスに参加",
   "voiceRoom.mute": "マイクミュート",
   "voiceRoom.mutedAriaLabel": "ミュート中",

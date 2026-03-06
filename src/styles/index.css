@@ -9278,6 +9278,33 @@ em-emoji-picker {
   pointer-events: none;
 }
 
+.screen-share-fullscreen-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.screen-share-main:hover .screen-share-fullscreen-btn,
+.screen-share-main:fullscreen .screen-share-fullscreen-btn {
+  opacity: 1;
+}
+
+.screen-share-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .screen-share-strip {
   display: flex;
   gap: 8px;
