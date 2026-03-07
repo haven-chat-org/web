@@ -4,17 +4,38 @@ import type { VoiceParticipant } from "@haven-chat-org/core";
 import { useAuthStore } from "./auth.js";
 import { useChatStore } from "./chat.js";
 import { useUiStore } from "./ui.js";
+import { playSound, startRingtone, stopRingtone } from "../lib/sounds.js";
 
 export type VoiceConnectionState = "disconnected" | "connecting" | "connected";
 export type ScreenShareQuality = "360p" | "720p" | "720p60" | "1080p" | "1080p60" | "1440p" | "1440p60" | "4k" | "4k60";
+export type NoiseSuppressionMode = "off" | "standard" | "enhanced";
 
-interface VoiceSettings {
+/** Per-category sound toggles */
+export interface SoundSettings {
+  /** Self voice join/leave */
+  soundVoice: boolean;
+  /** Other users join/leave VC */
+  soundUserJoinLeave: boolean;
+  /** Mute/unmute/deafen/undeafen */
+  soundMute: boolean;
+  /** Screen share start/stop */
+  soundScreenShare: boolean;
+  /** New message in other channels */
+  soundMessage: boolean;
+  /** New message in currently-viewed channel */
+  soundCurrentChannel: boolean;
+  /** Incoming DM call ringtone */
+  soundCallRingtone: boolean;
+}
+
+interface VoiceSettings extends SoundSettings {
   inputDeviceId: string;
   outputDeviceId: string;
   inputVolume: number;
   outputVolume: number;
   echoCancellation: boolean;
   noiseSuppression: boolean;
+  noiseSuppressionMode: NoiseSuppressionMode;
 }
 
 interface VoiceState extends VoiceSettings {
@@ -57,6 +78,8 @@ interface VoiceState extends VoiceSettings {
   setOutputVolume(v: number): void;
   setEchoCancellation(v: boolean): void;
   setNoiseSuppression(v: boolean): void;
+  setNoiseSuppressionMode(mode: NoiseSuppressionMode): void;
+  setSoundSetting<K extends keyof SoundSettings>(key: K, value: SoundSettings[K]): void;
   setUserVolume(userId: string, volume: number): void;
   setScreenShareVolume(userId: string, volume: number): void;
 
@@ -130,6 +153,16 @@ export const useVoiceStore = create<VoiceState>()(
       outputVolume: 1.0,
       echoCancellation: true,
       noiseSuppression: true,
+      noiseSuppressionMode: "standard" as NoiseSuppressionMode,
+
+      // Sound settings (defaults — all on)
+      soundVoice: true,
+      soundUserJoinLeave: true,
+      soundMute: true,
+      soundScreenShare: true,
+      soundMessage: true,
+      soundCurrentChannel: true,
+      soundCallRingtone: true,
 
       async joinVoice(channelId: string) {
         const api = useAuthStore.getState().api;
@@ -166,7 +199,8 @@ export const useVoiceStore = create<VoiceState>()(
       },
 
       async leaveVoice() {
-        const { currentChannelId } = get();
+        const { currentChannelId, soundVoice } = get();
+        if (currentChannelId && soundVoice) playSound("voiceLeave");
         if (currentChannelId) {
           const api = useAuthStore.getState().api;
           try {
@@ -187,15 +221,23 @@ export const useVoiceStore = create<VoiceState>()(
       },
 
       toggleMute() {
-        set((s) => ({ isMuted: !s.isMuted }));
+        const wasMuted = get().isMuted;
+        set({ isMuted: !wasMuted });
+        if (get().soundMute) playSound(wasMuted ? "unmute" : "mute");
       },
 
       toggleDeafen() {
-        set((s) => ({ isDeafened: !s.isDeafened }));
+        const wasDeafened = get().isDeafened;
+        set({ isDeafened: !wasDeafened });
+        if (get().soundMute) playSound(wasDeafened ? "undeafen" : "deafen");
       },
 
       setConnectionState(state: VoiceConnectionState) {
+        const was = get().connectionState;
         set({ connectionState: state });
+        if (state === "connected" && was === "connecting" && get().soundVoice) {
+          playSound("voiceJoin");
+        }
       },
 
       // Settings
@@ -217,6 +259,16 @@ export const useVoiceStore = create<VoiceState>()(
       setNoiseSuppression(v) {
         set({ noiseSuppression: v });
       },
+      setNoiseSuppressionMode(mode) {
+        // Keep legacy boolean in sync for the WebRTC constraint
+        set({
+          noiseSuppressionMode: mode,
+          noiseSuppression: mode === "standard",
+        });
+      },
+      setSoundSetting(key, value) {
+        set({ [key]: value } as Partial<SoundSettings>);
+      },
       setUserVolume(userId, volume) {
         set((s) => ({
           userVolumes: { ...s.userVolumes, [userId]: volume },
@@ -231,10 +283,21 @@ export const useVoiceStore = create<VoiceState>()(
         set({ screenSharePreset: preset });
       },
       setIsScreenSharing(sharing) {
+        const was = get().isScreenSharing;
         set({ isScreenSharing: sharing });
+        if (get().soundScreenShare) {
+          if (sharing && !was) playSound("screenShareStart");
+          else if (!sharing && was) playSound("screenShareStop");
+        }
       },
 
       handleVoiceStateUpdate(channelId, userId, username, displayName, avatarUrl, joined) {
+        const currentUserId = useAuthStore.getState().user?.id;
+        const { currentChannelId, connectionState, soundUserJoinLeave } = get();
+        if (soundUserJoinLeave && connectionState === "connected" && currentChannelId === channelId && userId !== currentUserId) {
+          playSound(joined ? "userJoin" : "userLeave");
+        }
+
         set((state) => {
           const current = state.participants[channelId] ?? [];
           let updated: VoiceParticipant[];
@@ -309,6 +372,7 @@ export const useVoiceStore = create<VoiceState>()(
       acceptCall(channelId: string) {
         const ws = useChatStore.getState().ws;
         if (!ws) return;
+        stopRingtone();
         ws.send({ type: "CallAccept", payload: { channel_id: channelId } });
         set({ incomingCall: null, activeCallChannelId: channelId });
         // Navigate to the DM channel
@@ -321,6 +385,7 @@ export const useVoiceStore = create<VoiceState>()(
       rejectCall(channelId: string) {
         const ws = useChatStore.getState().ws;
         if (!ws) return;
+        stopRingtone();
         ws.send({ type: "CallReject", payload: { channel_id: channelId } });
         set({ incomingCall: null });
       },
@@ -328,6 +393,7 @@ export const useVoiceStore = create<VoiceState>()(
       endCall(channelId: string) {
         const ws = useChatStore.getState().ws;
         if (!ws) return;
+        stopRingtone();
         ws.send({ type: "CallEnd", payload: { channel_id: channelId } });
         get().leaveVoice();
         set({ activeCallChannelId: null, outgoingCall: null });
@@ -335,6 +401,7 @@ export const useVoiceStore = create<VoiceState>()(
 
       handleCallRinging(channelId, callerId, callerName) {
         set({ incomingCall: { channelId, callerId, callerName } });
+        if (get().soundCallRingtone) startRingtone();
       },
 
       handleCallAccepted(channelId, _userId) {
@@ -358,6 +425,7 @@ export const useVoiceStore = create<VoiceState>()(
 
       handleCallEnded(channelId, _endedBy) {
         const { activeCallChannelId, currentChannelId, incomingCall, outgoingCall } = get();
+        stopRingtone();
         // Clear incoming/outgoing if it matches
         if (incomingCall?.channelId === channelId) {
           set({ incomingCall: null });
@@ -382,6 +450,14 @@ export const useVoiceStore = create<VoiceState>()(
         outputVolume: state.outputVolume,
         echoCancellation: state.echoCancellation,
         noiseSuppression: state.noiseSuppression,
+        noiseSuppressionMode: state.noiseSuppressionMode,
+        soundVoice: state.soundVoice,
+        soundUserJoinLeave: state.soundUserJoinLeave,
+        soundMute: state.soundMute,
+        soundScreenShare: state.soundScreenShare,
+        soundMessage: state.soundMessage,
+        soundCurrentChannel: state.soundCurrentChannel,
+        soundCallRingtone: state.soundCallRingtone,
         userVolumes: state.userVolumes,
         screenShareVolumes: state.screenShareVolumes,
         screenSharePreset: state.screenSharePreset,

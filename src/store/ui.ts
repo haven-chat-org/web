@@ -27,6 +27,8 @@ interface UiState {
 
   /** channelId -> mute entry */
   mutedChannels: Record<string, MuteEntry>;
+  /** serverId -> mute entry */
+  mutedServers: Record<string, MuteEntry>;
   /** channelId -> notification override */
   channelNotifications: Record<string, NotificationOverride>;
   /** serverId -> notification override */
@@ -95,6 +97,9 @@ interface UiState {
   muteChannel(channelId: string, durationMs: number | null): void;
   unmuteChannel(channelId: string): void;
   isChannelMuted(channelId: string): boolean;
+  muteServer(serverId: string, durationMs: number | null): void;
+  unmuteServer(serverId: string): void;
+  isServerMuted(serverId: string): boolean;
   setChannelNotification(channelId: string, setting: NotificationOverride): void;
   setServerNotification(serverId: string, setting: NotificationOverride): void;
 
@@ -136,6 +141,7 @@ export const useUiStore = create<UiState>()(
       searchPanelOpen: false,
       mentionPopup: null,
       mutedChannels: {},
+      mutedServers: {},
       channelNotifications: {},
       serverNotifications: {},
 
@@ -234,6 +240,35 @@ export const useUiStore = create<UiState>()(
         return false;
       },
 
+      muteServer(serverId, durationMs) {
+        set((s) => ({
+          mutedServers: {
+            ...s.mutedServers,
+            [serverId]: {
+              expiresAt: durationMs !== null ? Date.now() + durationMs : null,
+            },
+          },
+        }));
+      },
+
+      unmuteServer(serverId) {
+        set((s) => {
+          const { [serverId]: _, ...rest } = s.mutedServers;
+          return { mutedServers: rest };
+        });
+      },
+
+      isServerMuted(serverId) {
+        const entry = get().mutedServers[serverId];
+        if (!entry) return false;
+        if (entry.expiresAt === null) return true;
+        if (Date.now() < entry.expiresAt) return true;
+        // Expired — clean up lazily
+        const { [serverId]: _, ...rest } = get().mutedServers;
+        set({ mutedServers: rest });
+        return false;
+      },
+
       setChannelNotification(channelId, setting) {
         set((s) => {
           if (setting === "default") {
@@ -297,6 +332,7 @@ export const useUiStore = create<UiState>()(
         selectedServerId: state.selectedServerId,
         memberSidebarOpen: state.memberSidebarOpen,
         mutedChannels: state.mutedChannels,
+        mutedServers: state.mutedServers,
         channelNotifications: state.channelNotifications,
         serverNotifications: state.serverNotifications,
         theme: state.theme,

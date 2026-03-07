@@ -622,13 +622,21 @@ function VoiceTab() {
     inputVolume,
     outputVolume,
     echoCancellation,
-    noiseSuppression,
+    noiseSuppressionMode,
+    soundVoice,
+    soundUserJoinLeave,
+    soundMute,
+    soundScreenShare,
+    soundMessage,
+    soundCurrentChannel,
+    soundCallRingtone,
     setInputDevice,
     setOutputDevice,
     setInputVolume,
     setOutputVolume,
     setEchoCancellation,
-    setNoiseSuppression,
+    setNoiseSuppressionMode,
+    setSoundSetting,
   } = useVoiceStore();
 
   const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
@@ -775,14 +783,37 @@ function VoiceTab() {
         />
         <span>{t("userSettings.voice.echoCancellation")}</span>
       </label>
-      <label className="settings-toggle-label">
-        <input
-          type="checkbox"
-          checked={noiseSuppression}
-          onChange={(e) => setNoiseSuppression(e.target.checked)}
-        />
-        <span>{t("userSettings.voice.noiseSuppression")}</span>
-      </label>
+      <div className="settings-section-title" style={{ marginTop: 16 }}>{t("userSettings.voice.noiseSuppression")}</div>
+      <select
+        className="settings-select"
+        value={noiseSuppressionMode}
+        onChange={(e) => setNoiseSuppressionMode(e.target.value as "off" | "standard" | "enhanced")}
+      >
+        <option value="off">{t("userSettings.voice.noiseSuppressionOff")}</option>
+        <option value="standard">{t("userSettings.voice.noiseSuppressionStandard")}</option>
+        <option value="enhanced">{t("userSettings.voice.noiseSuppressionEnhanced")}</option>
+      </select>
+      <p className="settings-description">{t(`userSettings.voice.noiseSuppressionDesc.${noiseSuppressionMode}`)}</p>
+
+      <div className="settings-section-title" style={{ marginTop: 24 }}>{t("userSettings.voice.soundEffects")}</div>
+      {([
+        ["soundVoice", soundVoice],
+        ["soundUserJoinLeave", soundUserJoinLeave],
+        ["soundMute", soundMute],
+        ["soundScreenShare", soundScreenShare],
+        ["soundMessage", soundMessage],
+        ["soundCurrentChannel", soundCurrentChannel],
+        ["soundCallRingtone", soundCallRingtone],
+      ] as const).map(([key, val]) => (
+        <label key={key} className="settings-toggle-label">
+          <input
+            type="checkbox"
+            checked={val}
+            onChange={(e) => setSoundSetting(key, e.target.checked)}
+          />
+          <span>{t(`userSettings.voice.sound.${key}`)}</span>
+        </label>
+      ))}
     </div>
   );
 }

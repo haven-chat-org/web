@@ -19,6 +19,7 @@ interface SearchFilters {
 
 const HAS_KEYWORDS = new Set(["image", "video", "link", "file", "attachment"]);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function parseSearchQuery(raw: string): SearchFilters {
   const filters: SearchFilters = { query: "", inChannel: [], fromUser: [], has: [], after: null, before: null };
@@ -137,11 +138,15 @@ export default function SearchPanel() {
       hasAttachment: boolean;
     }> = [];
 
-    // Resolve from: filters to user IDs
+    // Resolve from: filters to user IDs (accepts username or UUID)
     const fromUserIds = new Set<string>();
     for (const name of filters.fromUser) {
-      for (const [userName, userId] of userIdByName) {
-        if (userName.includes(name)) fromUserIds.add(userId);
+      if (UUID_RE.test(name)) {
+        fromUserIds.add(name);
+      } else {
+        for (const [userName, userId] of userIdByName) {
+          if (userName.includes(name)) fromUserIds.add(userId);
+        }
       }
     }
 
@@ -237,7 +242,11 @@ export default function SearchPanel() {
   // Active filters for chips
   const activeFilterChips: Array<{ label: string; token: string; type: "text" | "date" }> = [
     ...filters.inChannel.map((v) => ({ label: `in:${v}`, token: `in:${v}`, type: "text" as const })),
-    ...filters.fromUser.map((v) => ({ label: `from:${v}`, token: `from:${v}`, type: "text" as const })),
+    ...filters.fromUser.map((v) => {
+      // Resolve UUID to username for display
+      const displayName = UUID_RE.test(v) ? (userNames[v] ?? v.slice(0, 8)) : v;
+      return { label: `from:${displayName}`, token: `from:${v}`, type: "text" as const };
+    }),
     ...filters.has.map((v) => ({ label: `has:${v}`, token: `has:${v}`, type: "text" as const })),
     ...(filters.after ? [{ label: `after:${filters.after}`, token: `after:${filters.after}`, type: (dateAfter ? "date" : "text") as "text" | "date" }] : []),
     ...(filters.before ? [{ label: `before:${filters.before}`, token: `before:${filters.before}`, type: (dateBefore ? "date" : "text") as "text" | "date" }] : []),
@@ -329,6 +338,7 @@ export default function SearchPanel() {
             <div className="search-hint-title">{t("search.hintsTitle")}</div>
             <div className="search-hint-row"><code>in:channel-name</code> — {t("search.hintInChannel")}</div>
             <div className="search-hint-row"><code>from:username</code> — {t("search.hintFromUser")}</div>
+            <div className="search-hint-row"><code>from:user-id</code> — {t("search.hintFromUserId")}</div>
             <div className="search-hint-row"><code>has:image</code> — {t("search.hintHasImage")}</div>
             <div className="search-hint-row"><code>has:video</code> — {t("search.hintHasVideo")}</div>
             <div className="search-hint-row"><code>has:link</code> — {t("search.hintHasLink")}</div>

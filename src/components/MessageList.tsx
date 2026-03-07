@@ -15,6 +15,7 @@ import { parseNamesFromMeta, parseChannelDisplay } from "../lib/channel-utils.js
 import EmojiPicker from "./EmojiPicker.js";
 import MessageContextMenu from "./MessageContextMenu.js";
 import ReportModal from "./ReportModal.js";
+import ForwardModal from "./ForwardModal.js";
 import type { DecryptedMessage, LinkPreview } from "../store/chat.js";
 
 // ─── Disappearing Message Timer ──────────────────────
@@ -174,12 +175,15 @@ export default function MessageList() {
   const toggleReaction = useChatStore((s) => s.toggleReaction);
   const blockedUserIds = useChatStore((s) => s.blockedUserIds);
   const startReply = useChatStore((s) => s.startReply);
+  const startForward = useChatStore((s) => s.startForward);
   const pinnedMessageIds = useChatStore((s) => s.pinnedMessageIds);
   const pinMessage = useChatStore((s) => s.pinMessage);
   const unpinMessage = useChatStore((s) => s.unpinMessage);
   const userRoleColors = useChatStore((s) => s.userRoleColors);
   const customEmojis = useChatStore((s) => s.customEmojis);
   const newMessageDividers = useChatStore((s) => s.newMessageDividers);
+  const forwardingMessage = useChatStore((s) => s.forwardingMessage);
+  const cancelForward = useChatStore((s) => s.cancelForward);
   const user = useAuthStore((s) => s.user);
   const friends = useFriendsStore((s) => s.friends);
   const systemUserIds = useMemo(() => new Set(friends.filter((f) => f.is_system).map((f) => f.user_id)), [friends]);
@@ -431,6 +435,33 @@ export default function MessageList() {
                     <span className="reply-preview-text">{t("messageList.replyPreview.notLoaded")}</span>
                   </div>
                 )}
+                {msg.forwarded && (
+                  <div className="forwarded-block">
+                    <div className="forwarded-header">
+                      <svg className="forwarded-icon" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M2 10c0-4 2-6 7-6m0 0l-3-3m3 3l-3 3" />
+                      </svg>
+                      <span className="forwarded-label">{t("messageList.forwarded.label")}</span>
+                    </div>
+                    <div className="forwarded-text">
+                      {msg.forwarded.text.length > 500
+                        ? msg.forwarded.text.slice(0, 500) + "..."
+                        : msg.forwarded.text}
+                    </div>
+                    <div className="forwarded-source">
+                      {msg.forwarded.channel_name && (
+                        <span className="forwarded-channel">#{msg.forwarded.channel_name}</span>
+                      )}
+                      {msg.forwarded.channel_name && <span className="forwarded-dot">&middot;</span>}
+                      <time dateTime={new Date(msg.forwarded.timestamp).toISOString()}>
+                        {formatMessageTime(msg.forwarded.timestamp)}
+                      </time>
+                      <svg className="forwarded-chevron" width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
                 {!isGrouped && (
                   <div className="message-meta">
                     <span
@@ -522,6 +553,20 @@ export default function MessageList() {
                     <path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z" />
                   </svg>
                 </button>
+                {/* Forward button */}
+                {msg.messageType !== "system" && (
+                  <button
+                    type="button"
+                    className="message-action-btn"
+                    onClick={() => startForward(msg.id)}
+                    title={t("messageList.actions.forwardTitle")}
+                    aria-label={t("messageList.actions.forwardAriaLabel")}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                    </svg>
+                  </button>
+                )}
                 {/* Reaction button */}
                 <button
                   type="button"
@@ -631,6 +676,9 @@ export default function MessageList() {
           channelId={currentChannelId}
           onClose={() => setReportingMessageId(null)}
         />
+      )}
+      {forwardingMessage && (
+        <ForwardModal onClose={cancelForward} />
       )}
     </div>
   );

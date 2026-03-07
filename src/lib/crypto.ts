@@ -51,7 +51,7 @@ import {
   type ReceivedSenderKey,
 } from "@haven-chat-org/core";
 import { useAuthStore } from "../store/auth.js";
-import type { DecryptedMessage, AttachmentMeta } from "../store/chat.js";
+import type { DecryptedMessage, AttachmentMeta, ForwardedContent } from "../store/chat.js";
 import { scheduleAutoBackup } from "./backup.js";
 
 // ─── DM Session Cache ─────────────────────────────────
@@ -298,6 +298,7 @@ export async function encryptOutgoing(
   formatting?: { contentType: string; data: object },
   linkPreviews?: Array<{ url: string; title?: string; description?: string; image?: string; site_name?: string }>,
   channelEncrypted = true,
+  forwarded?: ForwardedContent,
 ): Promise<{ senderToken: string; encryptedBody: string }> {
   const peerId = channelPeerMap.get(channelId);
 
@@ -315,6 +316,9 @@ export async function encryptOutgoing(
   }
   if (linkPreviews && linkPreviews.length > 0) {
     payloadObj.link_previews = linkPreviews;
+  }
+  if (forwarded) {
+    payloadObj.forwarded = forwarded;
   }
 
   // Unencrypted channel — send plaintext with type byte 0x00
@@ -527,6 +531,7 @@ function buildDecryptedMessage(
     linkPreviews: payload.link_previews as DecryptedMessage["linkPreviews"],
     contentType: payload.content_type as string | undefined,
     formatting: payload.formatting as object | undefined,
+    forwarded: payload.forwarded as DecryptedMessage["forwarded"],
     timestamp: raw.timestamp,
     raw,
   };

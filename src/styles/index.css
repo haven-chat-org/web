@@ -1676,20 +1676,33 @@ html[data-tauri] body {
 .user-panel-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   padding: 0 8px;
   height: 52px;
+}
+
+.user-panel-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 8px;
+  margin-right: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.user-panel-identity:hover {
+  background: rgba(128, 128, 128, 0.15);
 }
 
 .user-panel-avatar-wrap {
   position: relative;
   flex-shrink: 0;
-  cursor: pointer;
   border-radius: 50%;
-  transition: opacity 0.1s;
-}
-.user-panel-avatar-wrap:hover {
-  opacity: 0.8;
 }
 
 .user-panel-avatar {
@@ -1722,6 +1735,7 @@ html[data-tauri] body {
 .user-panel-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -1734,17 +1748,15 @@ html[data-tauri] body {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.2;
-  cursor: pointer;
-  transition: color 0.1s;
-}
-.user-panel-name:hover {
-  color: var(--interactive-hover);
 }
 
 .user-panel-tag {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-panel-actions {
@@ -1774,6 +1786,140 @@ html[data-tauri] body {
 
 .user-panel-btn.logout-btn:hover {
   color: var(--red);
+}
+
+/* ─── User Panel Profile Popup ──────────────────── */
+.user-panel-popup {
+  position: fixed;
+  width: 340px;
+  background: var(--bg-floating);
+  border-radius: 8px;
+  overflow: visible;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.15s ease;
+  z-index: 10000;
+}
+
+.user-panel-popup .profile-popup-body {
+  padding: 8px 16px 8px;
+}
+
+.user-panel-popup-actions {
+  padding-top: 4px;
+  border-top: 1px solid var(--bg-secondary);
+}
+
+.user-panel-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  text-align: left;
+}
+
+.user-panel-popup-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-normal);
+}
+
+.user-panel-popup-item svg {
+  flex-shrink: 0;
+  color: var(--interactive-normal);
+}
+
+.user-panel-popup-item:hover svg {
+  color: var(--interactive-hover);
+}
+
+.user-panel-popup-item .status-dot {
+  flex-shrink: 0;
+}
+
+.user-panel-popup-chevron {
+  margin-left: auto;
+  transition: transform 0.15s;
+}
+
+.user-panel-popup-chevron.open {
+  transform: rotate(90deg);
+}
+
+.user-panel-popup-divider {
+  height: 1px;
+  background: var(--bg-secondary);
+  margin: 4px 0;
+}
+
+/* Status submenu */
+.user-panel-popup-status-wrap {
+  position: relative;
+}
+
+.user-panel-popup-status-menu {
+  position: absolute;
+  left: calc(100% + 4px);
+  bottom: 0;
+  min-width: 200px;
+  background: var(--bg-floating);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.1s ease;
+  z-index: 1;
+}
+
+.user-panel-popup-status-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-normal);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: left;
+}
+
+.user-panel-popup-status-item:hover {
+  background: var(--bg-hover);
+}
+
+.user-panel-popup-status-item.active {
+  background: var(--bg-active);
+}
+
+.user-panel-popup-status-item .status-dot {
+  margin-top: 4px;
+}
+
+.user-panel-popup-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-panel-popup-status-label {
+  font-weight: 500;
+}
+
+.user-panel-popup-status-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
 }
 
 /* ─── Member Sidebar (right, 240px) ─────────────── */
@@ -4008,6 +4154,168 @@ html[data-tauri] body {
 .invite-back-btn {
   margin: 0 16px 12px;
   align-self: flex-start;
+}
+
+/* ─── Forwarded Message Block ────────────────── */
+.forwarded-block {
+  border-left: 2px solid var(--interactive-muted, var(--text-muted));
+  padding-left: 8px;
+  margin-bottom: 0;
+  opacity: 0.92;
+}
+
+.forwarded-header {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.forwarded-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.forwarded-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.forwarded-text {
+  color: var(--text-normal);
+  font-size: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.375;
+}
+
+.forwarded-source {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.forwarded-channel {
+  color: var(--text-muted);
+}
+
+.forwarded-dot {
+  color: var(--text-muted);
+}
+
+.forwarded-chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ─── Forward Modal ─────────────────────────── */
+.forward-modal {
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.forward-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-normal);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.forward-search:focus {
+  border-color: var(--blurple);
+}
+
+.forward-channel-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 8px;
+  max-height: 320px;
+}
+
+.forward-section {
+  margin-bottom: 8px;
+}
+
+.forward-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+}
+
+.forward-channel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-normal);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.forward-channel-item:hover {
+  background: var(--bg-hover);
+}
+
+.forward-channel-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.forward-channel-hash {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 1rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.forward-channel-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forward-no-results {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.forward-sent-badge {
+  text-align: center;
+  padding: 24px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.forward-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin: 4px 0 0;
 }
 
 /* ─── Invite Card (inline in messages) ────────── */
@@ -7326,27 +7634,14 @@ em-emoji-picker {
 }
 
 /* ─── User Panel Custom Status ───────────────────── */
-.user-panel-custom-status {
+.user-panel-custom-status-text {
   font-size: 12px;
   color: var(--text-muted);
-  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
-  transition: color 0.1s;
-}
-
-.user-panel-custom-status:hover {
-  color: var(--text-normal);
-}
-
-.user-panel-tag {
-  cursor: pointer;
-}
-
-.user-panel-tag:hover {
-  color: var(--text-normal);
+  line-height: 1.2;
 }
 
 /* ─── Create Channel Modal ───────────────────────── */
