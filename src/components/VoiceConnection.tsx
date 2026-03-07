@@ -1,7 +1,11 @@
-import { Component, useCallback, useEffect, useRef, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import { AudioPresets, type DisconnectReason } from "livekit-client";
+import { type AudioPreset, type DisconnectReason } from "livekit-client";
+import { KrispNoiseFilter, isKrispNoiseFilterSupported } from "@livekit/krisp-noise-filter";
 import { useVoiceStore } from "../store/voice.js";
+
+/** 384 kbps stereo Opus — high-fidelity voice for Haven. */
+const HAVEN_AUDIO_PRESET: AudioPreset = { maxBitrate: 384_000 };
 
 /** Timeout (ms) for the LiveKit connection to establish before giving up. */
 const CONNECT_TIMEOUT_MS = 15_000;
@@ -56,10 +60,29 @@ export default function VoiceConnection({ children }: { children?: ReactNode }) 
     inputDeviceId,
     outputDeviceId,
     echoCancellation,
-    noiseSuppression,
+    noiseSuppressionMode,
     setConnectionState,
     leaveVoice,
   } = useVoiceStore();
+
+  // Krisp noise filter processor (only created once, reused across reconnects)
+  const krispRef = useRef<ReturnType<typeof KrispNoiseFilter> | null>(null);
+  const krispProcessor = useMemo(() => {
+    if (noiseSuppressionMode !== "enhanced") {
+      // Disable if mode changed away from enhanced
+      if (krispRef.current) {
+        krispRef.current.setEnabled(false).catch(() => {});
+      }
+      return undefined;
+    }
+    if (!isKrispNoiseFilterSupported()) return undefined;
+    if (!krispRef.current) {
+      krispRef.current = KrispNoiseFilter();
+    } else {
+      krispRef.current.setEnabled(true).catch(() => {});
+    }
+    return krispRef.current;
+  }, [noiseSuppressionMode]);
 
   const isActive = connectionState === "connected" || connectionState === "connecting";
   const connectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -140,16 +163,18 @@ export default function VoiceConnection({ children }: { children?: ReactNode }) 
           dynacast: true,
           adaptiveStream: true,
           publishDefaults: {
-            audioPreset: AudioPresets.music,  // 32kbps Opus (up from 20kbps default)
+            audioPreset: HAVEN_AUDIO_PRESET,  // 384kbps Opus
             dtx: true,                        // save bandwidth during silence
             red: true,                        // redundant encoding for packet loss resilience
           },
           audioCaptureDefaults: {
             deviceId: inputDeviceId || undefined,
             echoCancellation,
-            noiseSuppression,
-            channelCount: 1,
+            // Standard mode uses browser-native suppression; enhanced uses Krisp processor
+            noiseSuppression: noiseSuppressionMode === "standard",
+            channelCount: 2,                  // stereo for high-fidelity audio
             autoGainControl: true,
+            processor: krispProcessor,
           },
           audioOutput: {
             deviceId: outputDeviceId || undefined,

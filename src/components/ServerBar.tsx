@@ -986,6 +986,15 @@ function SortableServerIcon({
   );
 }
 
+const SERVER_MUTE_DURATIONS: { key: string; ms: number | null }[] = [
+  { key: "15min", ms: 15 * 60 * 1000 },
+  { key: "1hour", ms: 60 * 60 * 1000 },
+  { key: "3hours", ms: 3 * 60 * 60 * 1000 },
+  { key: "8hours", ms: 8 * 60 * 60 * 1000 },
+  { key: "24hours", ms: 24 * 60 * 60 * 1000 },
+  { key: "untilTurnOff", ms: null },
+];
+
 const SERVER_NOTIFICATION_OPTIONS: { key: string; value: "default" | "all" | "mentions" | "nothing"; descKey?: string }[] = [
   { key: "useDefault", value: "default", descKey: "onlyMentions" },
   { key: "allMessages", value: "all" },
@@ -1023,9 +1032,13 @@ function ServerBarContextMenu({
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const { handleKeyDown } = useMenuKeyboard(menuRef);
-  const [submenu, setSubmenu] = useState<"notify" | undefined>(undefined);
+  const [submenu, setSubmenu] = useState<"notify" | "mute" | undefined>(undefined);
   const serverNotifications = useUiStore((s) => s.serverNotifications);
   const setServerNotification = useUiStore((s) => s.setServerNotification);
+  const muteServer = useUiStore((s) => s.muteServer);
+  const unmuteServer = useUiStore((s) => s.unmuteServer);
+  const isServerMuted = useUiStore((s) => s.isServerMuted);
+  const muted = isServerMuted(serverId);
   const currentNotify = serverNotifications[serverId] ?? "default";
   const notifyLabel = t(`serverBar.contextMenu.notification.${SERVER_NOTIFICATION_OPTIONS.find((o) => o.value === currentNotify)?.key ?? "useDefault"}`);
 
@@ -1040,6 +1053,43 @@ function ServerBarContextMenu({
       onKeyDown={handleKeyDown}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Mute Server */}
+      <div
+        className="context-submenu-trigger"
+        onMouseEnter={() => setSubmenu("mute")}
+      >
+        {muted ? (
+          <button role="menuitem" tabIndex={-1} onClick={() => { unmuteServer(serverId); onClose(); }}>
+            {t("serverBar.contextMenu.unmuteServer")}
+          </button>
+        ) : (
+          <>
+            <button role="menuitem" tabIndex={-1} onClick={(e) => {
+              e.stopPropagation();
+              setSubmenu(submenu === "mute" ? undefined : "mute");
+            }}>
+              <span>{t("serverBar.contextMenu.muteServer")}</span>
+              <span className="context-submenu-arrow">&rsaquo;</span>
+            </button>
+            {submenu === "mute" && (
+              <div className="context-submenu" onMouseLeave={() => setSubmenu(undefined)}>
+                {SERVER_MUTE_DURATIONS.map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => {
+                      muteServer(serverId, d.ms);
+                      onClose();
+                    }}
+                  >
+                    {t(`serverBar.contextMenu.muteDuration.${d.key}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Notification Settings */}
       <div
         className="context-submenu-trigger"

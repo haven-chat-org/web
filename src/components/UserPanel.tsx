@@ -7,8 +7,8 @@ import { useUiStore } from "../store/ui.js";
 import { useVoiceStore } from "../store/voice.js";
 import { parseChannelDisplay } from "../lib/channel-utils.js";
 import Avatar from "./Avatar.js";
-import StatusSelector from "./StatusSelector.js";
 import CustomStatusModal from "./CustomStatusModal.js";
+import UserPanelPopup from "./UserPanelPopup.js";
 
 export default function UserPanel() {
   const { t } = useTranslation();
@@ -26,9 +26,9 @@ export default function UserPanel() {
   const toggleDeafen = useVoiceStore((s) => s.toggleDeafen);
   const leaveVoice = useVoiceStore((s) => s.leaveVoice);
   const channels = useChatStore((s) => s.channels);
-  const [showStatusSelector, setShowStatusSelector] = useState(false);
   const [showCustomStatus, setShowCustomStatus] = useState(false);
-  const avatarWrapRef = useRef<HTMLDivElement>(null);
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const panelRowRef = useRef<HTMLDivElement>(null);
 
   if (!user) return null;
 
@@ -102,31 +102,37 @@ export default function UserPanel() {
           </div>
         </div>
       )}
-      <div className="user-panel-row">
-        <div className="user-panel-avatar-wrap" ref={avatarWrapRef} onClick={() => setShowStatusSelector((v) => !v)} role="button" tabIndex={0} aria-label={t("userPanel.changeStatus")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowStatusSelector((v) => !v); } }}>
-          <Avatar
-            avatarUrl={user.avatar_url}
-            name={user.display_name || user.username}
-            size={32}
-            className="user-panel-avatar"
-          />
-          <span
-            className="user-panel-status"
-            style={{ backgroundColor: statusConfig.color }}
-          />
-        </div>
-        <div className="user-panel-info">
-          <span className="user-panel-name" role="button" tabIndex={0} onClick={() => setShowUserSettings(true, "profile")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowUserSettings(true, "profile"); } }}>{user.display_name || user.username}</span>
-          {user.custom_status ? (
-            <span className="user-panel-custom-status" onClick={() => setShowCustomStatus(true)} title={t("userPanel.editCustomStatus")} role="button" tabIndex={0} aria-label={t("userPanel.setCustomStatus")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCustomStatus(true); } }}>
-              {user.custom_status_emoji && <span>{user.custom_status_emoji} </span>}
-              {user.custom_status}
-            </span>
-          ) : (
-            <span className="user-panel-tag" onClick={() => setShowCustomStatus(true)} title={t("userPanel.setCustomStatus")} role="button" tabIndex={0} aria-label={t("userPanel.setCustomStatus")} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowCustomStatus(true); } }}>
-              {statusConfig.label}
-            </span>
-          )}
+      <div className="user-panel-row" ref={panelRowRef}>
+        <div
+          className="user-panel-identity"
+          role="button"
+          tabIndex={0}
+          onClick={() => setShowProfilePopup((v) => !v)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowProfilePopup((v) => !v); } }}
+        >
+          <div className="user-panel-avatar-wrap">
+            <Avatar
+              avatarUrl={user.avatar_url}
+              name={user.display_name || user.username}
+              size={32}
+              className="user-panel-avatar"
+            />
+            <span
+              className="user-panel-status"
+              style={{ backgroundColor: statusConfig.color }}
+            />
+          </div>
+          <div className="user-panel-info">
+            <span className="user-panel-name">{user.display_name || user.username}</span>
+            {user.custom_status ? (
+              <span className="user-panel-custom-status-text">
+                {user.custom_status_emoji && <span>{user.custom_status_emoji} </span>}
+                {user.custom_status}
+              </span>
+            ) : (
+              <span className="user-panel-tag">{statusConfig.label}</span>
+            )}
+          </div>
         </div>
         <div className="user-panel-actions">
           {isAdmin && (
@@ -164,8 +170,12 @@ export default function UserPanel() {
         </div>
       </div>
 
-      {showStatusSelector && (
-        <StatusSelector anchorRef={avatarWrapRef} onClose={() => setShowStatusSelector(false)} />
+      {showProfilePopup && (
+        <UserPanelPopup
+          anchorRef={panelRowRef}
+          onClose={() => setShowProfilePopup(false)}
+          onEditCustomStatus={() => setShowCustomStatus(true)}
+        />
       )}
 
       {showCustomStatus && (

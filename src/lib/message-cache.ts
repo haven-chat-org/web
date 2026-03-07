@@ -22,6 +22,7 @@ interface CachedMsg {
   ct?: string; // contentType
   fmt?: unknown; // formatting
   ea?: string; // expiresAt
+  fwd?: unknown; // forwarded
 }
 
 type Cache = Record<string, CachedMsg>;
@@ -79,6 +80,7 @@ export function cacheMessage(msg: DecryptedMessage): void {
     ...(msg.contentType ? { ct: msg.contentType } : {}),
     ...(msg.formatting ? { fmt: msg.formatting } : {}),
     ...(msg.expiresAt ? { ea: msg.expiresAt } : {}),
+    ...(msg.forwarded ? { fwd: msg.forwarded } : {}),
   };
   persistCache();
 
@@ -116,6 +118,7 @@ export function getCachedMessage(
     contentType: cached.ct,
     formatting: cached.fmt as object | undefined,
     expiresAt: cached.ea,
+    forwarded: cached.fwd as DecryptedMessage["forwarded"],
     timestamp,
     edited,
     raw: raw as DecryptedMessage["raw"],

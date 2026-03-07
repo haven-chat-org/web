@@ -23,6 +23,7 @@ interface StoredMessage {
   formatting?: unknown;
   edited?: boolean;
   expiresAt?: string;
+  forwarded?: unknown;
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -63,6 +64,7 @@ function toStored(msg: DecryptedMessage): StoredMessage {
     ...(msg.formatting ? { formatting: msg.formatting as unknown } : {}),
     ...(msg.edited ? { edited: true } : {}),
     ...(msg.expiresAt ? { expiresAt: msg.expiresAt } : {}),
+    ...(msg.forwarded ? { forwarded: msg.forwarded as unknown } : {}),
   };
 }
 
@@ -79,6 +81,7 @@ function fromStored(stored: StoredMessage, raw?: unknown): DecryptedMessage {
     formatting: stored.formatting as object | undefined,
     edited: stored.edited ?? false,
     expiresAt: stored.expiresAt,
+    forwarded: stored.forwarded as DecryptedMessage["forwarded"],
     raw: raw as DecryptedMessage["raw"],
   };
 }

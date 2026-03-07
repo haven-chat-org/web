@@ -54,6 +54,15 @@ export interface LinkPreview {
   site_name?: string;
 }
 
+export interface ForwardedContent {
+  sender_name: string;
+  text: string;
+  timestamp: string;
+  channel_name?: string;
+  content_type?: string;
+  formatting?: object;
+}
+
 export interface DecryptedMessage {
   id: string;
   channelId: string;
@@ -69,6 +78,7 @@ export interface DecryptedMessage {
   messageType?: string; // "user" | "system"
   filterAction?: "hide" | "warn" | null;
   expiresAt?: string | null;
+  forwarded?: ForwardedContent;
   raw: MessageResponse;
 }
 
@@ -120,6 +130,8 @@ interface ChatState {
   dataLoaded: boolean;
   /** serverId -> content filters for that server */
   contentFilters: Record<string, ContentFilterResponse[]>;
+  /** Message being forwarded (null when not forwarding) */
+  forwardingMessage: DecryptedMessage | null;
 
   connect(): void;
   disconnect(): void;
@@ -155,6 +167,9 @@ interface ChatState {
   checkContentFilter(serverId: string, plaintext: string): { filtered: boolean; action: "hide" | "warn" } | null;
   setChannelTtl(channelId: string, messageTtl: number | null): Promise<void>;
   removeExpiredMessage(channelId: string, messageId: string): void;
+  startForward(messageId: string): void;
+  cancelForward(): void;
+  forwardMessage(targetChannelId: string): Promise<void>;
 }
 
 const TYPING_EXPIRY_MS = 3000;
@@ -211,6 +226,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   newMessageDividers: {},
   dataLoaded: false,
   contentFilters: {},
+  forwardingMessage: null,
 
   connect() {
     const { api } = useAuthStore.getState();
@@ -1162,6 +1178,103 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ replyingToId: null });
   },
 
+  startForward(messageId: string) {
+    const { currentChannelId, messages } = get();
+    if (!currentChannelId) return;
+    const channelMsgs = messages[currentChannelId] ?? [];
+    const msg = channelMsgs.find((m) => m.id === messageId);
+    if (msg) set({ forwardingMessage: msg });
+  },
+
+  cancelForward() {
+    set({ forwardingMessage: null });
+  },
+
+  async forwardMessage(targetChannelId: string) {
+    const { ws, forwardingMessage } = get();
+    if (!ws || !forwardingMessage) return;
+
+    if (!ws.isConnected) {
+      ws.connect();
+      await new Promise((r) => setTimeout(r, 1000));
+      if (!ws.isConnected) return;
+    }
+
+    const { user } = useAuthStore.getState();
+    if (!user) return;
+
+    // If forwarding an already-forwarded message, carry the original forward content
+    const forwarded: ForwardedContent = forwardingMessage.forwarded
+      ? forwardingMessage.forwarded
+      : (() => {
+          // Derive source channel display name
+          const srcChannel = get().channels.find((c) => c.id === forwardingMessage.channelId);
+          let channelName: string | undefined;
+          if (srcChannel) {
+            try {
+              const meta = JSON.parse(unicodeAtob(srcChannel.encrypted_meta));
+              if (meta.type === "dm" && meta.names) {
+                const otherName = Object.entries(meta.names).find(([id]) => id !== user.id)?.[1] as string | undefined;
+                channelName = otherName ?? "DM";
+              } else if (meta.type === "group") {
+                const names = Object.entries(meta.names as Record<string, string> ?? {})
+                  .filter(([id]) => id !== user.id)
+                  .map(([, n]) => n);
+                channelName = names.length > 0 ? names.join(", ") : "Group";
+              } else {
+                channelName = meta.name || undefined;
+              }
+            } catch { /* non-fatal */ }
+          }
+          return {
+            sender_name: forwardingMessage.senderId === user.id
+              ? (user.username ?? "You")
+              : (get().userNames[forwardingMessage.senderId] ?? forwardingMessage.senderId.slice(0, 8)),
+            text: forwardingMessage.text,
+            timestamp: forwardingMessage.timestamp,
+            ...(channelName ? { channel_name: channelName } : {}),
+            ...(forwardingMessage.contentType ? { content_type: forwardingMessage.contentType } : {}),
+            ...(forwardingMessage.formatting ? { formatting: forwardingMessage.formatting } : {}),
+          };
+        })();
+
+    try {
+      const channel = get().channels.find((c) => c.id === targetChannelId);
+      const channelEncrypted = channel?.encrypted ?? true;
+
+      const { senderToken, encryptedBody } = await encryptOutgoing(
+        user.id,
+        targetChannelId,
+        "",
+        undefined,
+        undefined,
+        undefined,
+        channelEncrypted,
+        forwarded,
+      );
+
+      const tempId = `temp-${crypto.randomUUID()}`;
+      pendingAcks.push(tempId);
+
+      const optimistic: DecryptedMessage = {
+        id: tempId,
+        channelId: targetChannelId,
+        senderId: user.id,
+        text: "",
+        forwarded,
+        timestamp: new Date().toISOString(),
+        raw: {} as MessageResponse,
+      };
+      set((state) => appendMessage(state, targetChannelId, optimistic));
+
+      ws.sendMessage(targetChannelId, senderToken, encryptedBody);
+      set({ forwardingMessage: null });
+    } catch (err) {
+      console.error("[forwardMessage] Failed to forward:", err);
+      throw err;
+    }
+  },
+
   async loadPins(channelId: string) {
     const { api } = useAuthStore.getState();
     try {
@@ -1777,7 +1890,29 @@ async function handleIncomingMessage(raw: MessageResponse) {
           const body = msg.text?.slice(0, 100) || "sent a message";
           sendNotification("New Message", `${senderName}: ${body}`);
         }
+
+        // Play notification sound (respecting server/channel mute)
+        const isMuted = channel?.server_id
+          ? useUiStore.getState().isServerMuted(channel.server_id)
+          : false;
+        const isChMuted = useUiStore.getState().isChannelMuted(raw.channel_id);
+        if (!isMuted && !isChMuted && shouldNotify) {
+          import("./voice.js").then(({ useVoiceStore }) => {
+            if (useVoiceStore.getState().soundMessage) {
+              import("../lib/sounds.js").then(({ playSound }) => playSound("newMessage"));
+            }
+          });
+        }
       }
+    }
+
+    // Play subtle sound for messages in the currently-viewed channel
+    if (raw.channel_id === useChatStore.getState().currentChannelId) {
+      import("./voice.js").then(({ useVoiceStore }) => {
+        if (useVoiceStore.getState().soundCurrentChannel) {
+          import("../lib/sounds.js").then(({ playSound }) => playSound("messageInCurrentChannel"));
+        }
+      });
     }
 
     useChatStore.setState((state) => appendMessage(state, raw.channel_id, msg));

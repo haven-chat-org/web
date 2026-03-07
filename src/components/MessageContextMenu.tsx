@@ -32,6 +32,7 @@ export default function MessageContextMenu({
   const user = useAuthStore((s) => s.user);
   const startReply = useChatStore((s) => s.startReply);
   const startEditing = useChatStore((s) => s.startEditing);
+  const startForward = useChatStore((s) => s.startForward);
   const pinMessage = useChatStore((s) => s.pinMessage);
   const unpinMessage = useChatStore((s) => s.unpinMessage);
   const { can } = usePermissions(serverId);
@@ -89,6 +90,17 @@ export default function MessageContextMenu({
       >
         {t("messageContext.copyText")}
       </button>
+      {message.messageType !== "system" && (
+        <button
+          type="button"
+          role="menuitem"
+          tabIndex={-1}
+          className="context-menu-item"
+          onClick={() => { startForward(message.id); onClose(); }}
+        >
+          {t("messageContext.forward")}
+        </button>
+      )}
       {canManageMessages && (
         <>
           <div className="context-menu-separator" role="separator" />

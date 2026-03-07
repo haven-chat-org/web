@@ -328,8 +328,11 @@ function MemberItem({
       </div>
       {isOwner && (
         <span title={t("memberSidebar.serverOwner")}>
-          <svg className="member-owner-crown" width="16" height="16" viewBox="0 0 16 16" fill="#f0b232" aria-hidden="true">
-            <path d="M8 1v4M8 5L5 3v4l3 2 3-2V3L8 5zM8 9v6M5 13h6" stroke="#f0b232" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <svg className="member-owner-crown" width="16" height="16" viewBox="0 0 24 24" fill="#f0b232" aria-hidden="true">
+            <path d="M2 19h20v2H2v-2zm2-2l1.5-9L12 12l6.5-4L20 17H4z" />
+            <circle cx="4" cy="7" r="1.5" />
+            <circle cx="12" cy="4" r="1.5" />
+            <circle cx="20" cy="7" r="1.5" />
           </svg>
         </span>
       )}
