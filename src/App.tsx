@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { needsServerUrl } from "./lib/serverUrl";
 import { isTauri, getPlatform } from "./lib/tauriEnv";
 import { initLogging } from "./lib/logging.js";
 import { initTraySubscription } from "./lib/tray.js";
+import { initDeepLinks } from "./lib/deep-link.js";
 import { useAuthStore } from "./store/auth.js";
 import { useUiStore } from "./store/ui.js";
 import { sanitizeCss } from "./lib/sanitize-css.js";
@@ -75,6 +76,8 @@ export default function App() {
   const initialized = useAuthStore((s) => s.initialized);
   const user = useAuthStore((s) => s.user);
 
+  const navigate = useNavigate();
+
   useA11yAttributes();
   useUpdateChecker();
 
@@ -85,6 +88,10 @@ export default function App() {
   useEffect(() => {
     initTraySubscription();
   }, []);
+
+  useEffect(() => {
+    initDeepLinks(navigate);
+  }, [navigate]);
 
   useEffect(() => {
     init();
