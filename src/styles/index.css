@@ -819,14 +819,22 @@ body {
 }
 
 /* ─── Tauri Desktop Shell ───────────────────────── */
-/* macOS overlay title bar: push content below traffic lights */
-html[data-tauri] body {
+/* Fallback until platform is detected */
+html[data-tauri]:not([data-platform]) body {
   padding-top: 28px;
 }
 
-/* Extra drag region next to macOS traffic lights */
+/* macOS: 28px for overlay traffic lights */
+html[data-platform="macos"] body {
+  padding-top: 28px;
+}
+/* Windows: 32px for decorum titlebar controls */
+html[data-platform="windows"] body {
+  padding-top: 32px;
+}
+
+/* Shared drag region base (height set per-platform below) */
 .titlebar-drag-region {
-  height: 28px;
   position: fixed;
   top: 0;
   left: 0;
@@ -834,6 +842,55 @@ html[data-tauri] body {
   z-index: 9999;
   -webkit-app-region: drag;
   app-region: drag;
+}
+
+/* macOS drag region: 28px to match traffic light height */
+html[data-platform="macos"] .titlebar-drag-region {
+  height: 28px;
+}
+/* Windows drag region: 32px to match decorum controls */
+html[data-platform="windows"] .titlebar-drag-region {
+  height: 32px;
+}
+/* Fallback height until platform is detected */
+html[data-tauri]:not([data-platform]) .titlebar-drag-region {
+  height: 28px;
+}
+
+/* ─── Decorum Window Controls (Windows) ────────── */
+/* Decorum injects: div[data-tauri-decorum-tb] containing
+   button#decorum-tb-minimize, button#decorum-tb-maximize, button#decorum-tb-close */
+html[data-platform="windows"] div[data-tauri-decorum-tb] {
+  z-index: 10000;
+}
+
+html[data-platform="windows"] button.decorum-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  transition: background 0.1s ease;
+}
+
+html[data-platform="windows"] button.decorum-tb-btn:hover {
+  background: var(--bg-hover);
+}
+
+html[data-platform="windows"] button#decorum-tb-close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* Hide decorum controls on macOS (they should not render, but defensive) */
+html[data-platform="macos"] div[data-tauri-decorum-tb] {
+  display: none;
 }
 
 /* ─── Server Bar (far left, 72px) ────────────────── */
@@ -846,7 +903,7 @@ html[data-tauri] body {
   align-items: center;
   overflow: hidden;
   position: relative;
-  /* Pad for macOS overlay traffic lights */
+  /* Pad for titlebar overlay (macOS traffic lights, Windows decorum) */
   padding-top: env(titlebar-area-height, 0px);
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { needsServerUrl } from "./lib/serverUrl";
-import { isTauri } from "./lib/tauriEnv";
+import { isTauri, getPlatform } from "./lib/tauriEnv";
 import { useAuthStore } from "./store/auth.js";
 import { useUiStore } from "./store/ui.js";
 import { sanitizeCss } from "./lib/sanitize-css.js";
@@ -31,7 +31,12 @@ function useA11yAttributes() {
     const el = document.documentElement;
     el.setAttribute("data-theme", theme);
 
-    if (isTauri()) el.setAttribute("data-tauri", "");
+    if (isTauri()) {
+      el.setAttribute("data-tauri", "");
+      getPlatform().then((p) => {
+        el.setAttribute("data-platform", p);
+      });
+    }
 
     if (reducedMotion) el.setAttribute("data-reduced-motion", "");
     else el.removeAttribute("data-reduced-motion");
