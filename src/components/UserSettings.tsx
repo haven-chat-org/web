@@ -17,8 +17,9 @@ import {
   checkBackupStatus,
   downloadAndRestoreBackup,
 } from "../lib/backup.js";
+import { isTauri } from "../lib/tauriEnv.js";
 
-type Tab = "account" | "profile" | "privacy" | "voice" | "appearance" | "accessibility" | "security";
+type Tab = "account" | "profile" | "privacy" | "voice" | "appearance" | "accessibility" | "security" | "about";
 
 export default function UserSettings() {
   const { t } = useTranslation();
@@ -88,6 +89,14 @@ export default function UserSettings() {
           >
             {t("userSettings.tab.accessibility")}
           </button>
+          {isTauri() && (
+            <button
+              className={`user-settings-nav-item ${tab === "about" ? "active" : ""}`}
+              onClick={() => setTab("about")}
+            >
+              {t("userSettings.tab.about")}
+            </button>
+          )}
           <div className="user-settings-sidebar-divider" />
           <button
             className="user-settings-nav-item danger"
@@ -101,7 +110,7 @@ export default function UserSettings() {
         </nav>
         <div className="user-settings-content">
           <div className="user-settings-content-header">
-            <h2>{tab === "account" ? t("userSettings.tab.myAccount") : tab === "profile" ? t("userSettings.tab.profile") : tab === "privacy" ? t("userSettings.tab.privacy") : tab === "voice" ? t("userSettings.tab.voiceAudio") : tab === "appearance" ? t("userSettings.tab.appearance") : tab === "security" ? t("userSettings.tab.securityBackup") : t("userSettings.tab.accessibility")}</h2>
+            <h2>{tab === "account" ? t("userSettings.tab.myAccount") : tab === "profile" ? t("userSettings.tab.profile") : tab === "privacy" ? t("userSettings.tab.privacy") : tab === "voice" ? t("userSettings.tab.voiceAudio") : tab === "appearance" ? t("userSettings.tab.appearance") : tab === "security" ? t("userSettings.tab.securityBackup") : tab === "about" ? t("userSettings.about.title") : t("userSettings.tab.accessibility")}</h2>
             <button className="settings-esc-close" onClick={() => setShowUserSettings(false)} aria-label={t("userSettings.closeAriaLabel")}>
               <div className="settings-esc-circle">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -119,6 +128,7 @@ export default function UserSettings() {
             {tab === "appearance" && <AppearanceTab />}
             {tab === "security" && <SecurityTab />}
             {tab === "accessibility" && <AccessibilityTab />}
+            {tab === "about" && <AboutTab />}
           </div>
         </div>
       </div>
@@ -1640,6 +1650,62 @@ function AccessibilityTab() {
       <p className="settings-hint">
         {t("userSettings.accessibility.alwaysShowTimestampsHint")}
       </p>
+    </div>
+  );
+}
+
+// --- About Tab (Tauri only) ------------------------------------------------
+
+function AboutTab() {
+  const { t } = useTranslation();
+  const [checkState, setCheckState] = useState<"idle" | "checking" | "upToDate">("idle");
+
+  const appVersion = "0.1.0";
+
+  async function handleCheckForUpdates() {
+    setCheckState("checking");
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const update = await check();
+      if (update) {
+        const { useUiStore: store } = await import("../store/ui.js");
+        store.getState().setUpdateAvailable(update.version);
+      } else {
+        setCheckState("upToDate");
+        setTimeout(() => setCheckState("idle"), 3000);
+      }
+    } catch {
+      setCheckState("idle");
+    }
+  }
+
+  async function handleOpenLogs() {
+    try {
+      const { appLogDir } = await import("@tauri-apps/api/path");
+      const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+      await revealItemInDir(await appLogDir());
+    } catch {
+      // silently ignore if the path cannot be resolved
+    }
+  }
+
+  return (
+    <div className="about-section">
+      <div className="about-version">
+        {t("userSettings.about.version", { version: appVersion })}
+      </div>
+      <div className="about-actions">
+        <button className="settings-btn" onClick={handleCheckForUpdates} disabled={checkState === "checking"}>
+          {checkState === "checking"
+            ? t("userSettings.about.checking")
+            : checkState === "upToDate"
+              ? t("userSettings.about.upToDate")
+              : t("userSettings.about.checkForUpdates")}
+        </button>
+        <button className="settings-btn" onClick={handleOpenLogs}>
+          {t("userSettings.about.openLogs")}
+        </button>
+      </div>
     </div>
   );
 }

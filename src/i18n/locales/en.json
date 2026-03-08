@@ -1429,5 +1429,19 @@
   "onboarding.previous": "Back",
   "onboarding.done": "Get Started",
   "onboarding.progress": "{{current}} / {{total}}",
-  "onboarding.tourAriaLabel": "Onboarding tour"
+  "onboarding.tourAriaLabel": "Onboarding tour",
+
+  "update.available": "Haven {{version}} is available",
+  "update.dismiss": "Dismiss",
+  "update.downloading": "Downloading update...",
+  "update.restart": "Restart",
+  "update.restartReady": "Restart to finish updating",
+  "update.updateNow": "Update now",
+  "userSettings.about.checkForUpdates": "Check for Updates",
+  "userSettings.about.checking": "Checking...",
+  "userSettings.about.openLogs": "Open Log Folder",
+  "userSettings.about.title": "About Haven",
+  "userSettings.about.upToDate": "You're up to date!",
+  "userSettings.about.version": "Version {{version}}",
+  "userSettings.tab.about": "About"
 }

@@ -11700,3 +11700,73 @@ em-emoji-picker {
   content: "\2713";
   font-size: 9px;
 }
+
+/* Update banner -- Discord-style notification bar below titlebar */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--accent, #5865f2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 100;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.update-banner-text {
+  flex: 1;
+  text-align: center;
+}
+
+.update-banner-action {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.update-banner-action:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.update-banner-dismiss {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.update-banner-dismiss:hover {
+  color: #fff;
+}
+
+/* About section in User Settings */
+.about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.about-section .about-version {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.about-section .about-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

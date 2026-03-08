@@ -2,9 +2,12 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { needsServerUrl } from "./lib/serverUrl";
 import { isTauri, getPlatform } from "./lib/tauriEnv";
+import { initLogging } from "./lib/logging.js";
 import { useAuthStore } from "./store/auth.js";
 import { useUiStore } from "./store/ui.js";
 import { sanitizeCss } from "./lib/sanitize-css.js";
+import { useUpdateChecker } from "./hooks/useUpdateChecker.js";
+import UpdateBanner from "./components/UpdateBanner.js";
 import "./i18n/index.js";
 import Login from "./pages/Login.js";
 import Register from "./pages/Register.js";
@@ -72,6 +75,11 @@ export default function App() {
   const user = useAuthStore((s) => s.user);
 
   useA11yAttributes();
+  useUpdateChecker();
+
+  useEffect(() => {
+    initLogging();
+  }, []);
 
   useEffect(() => {
     init();
@@ -84,6 +92,7 @@ export default function App() {
   return (
     <>
       {isTauri() && <div className="titlebar-drag-region" data-tauri-drag-region />}
+      {isTauri() && <UpdateBanner />}
       <Routes>
         <Route path="/connect" element={<ServerConnect />} />
         <Route path="/login" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Login />} />
