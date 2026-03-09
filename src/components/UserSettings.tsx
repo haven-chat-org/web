@@ -1659,8 +1659,34 @@ function AccessibilityTab() {
 function AboutTab() {
   const { t } = useTranslation();
   const [checkState, setCheckState] = useState<"idle" | "checking" | "upToDate">("idle");
+  const [startupEnabled, setStartupEnabled] = useState(false);
 
   const appVersion = "0.1.0";
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { isEnabled } = await import("@tauri-apps/plugin-autostart");
+        setStartupEnabled(await isEnabled());
+      } catch {
+        // silently ignore if plugin unavailable
+      }
+    })();
+  }, []);
+
+  async function handleToggleStartup() {
+    try {
+      const { enable, disable, isEnabled } = await import("@tauri-apps/plugin-autostart");
+      if (startupEnabled) {
+        await disable();
+      } else {
+        await enable();
+      }
+      setStartupEnabled(await isEnabled());
+    } catch {
+      // silently ignore errors
+    }
+  }
 
   async function handleCheckForUpdates() {
     setCheckState("checking");
@@ -1693,6 +1719,20 @@ function AboutTab() {
     <div className="about-section">
       <div className="about-version">
         {t("userSettings.about.version", { version: appVersion })}
+      </div>
+      <div className="settings-toggle-row">
+        <div className="settings-toggle-info">
+          <span className="settings-toggle-label">{t("userSettings.about.launchAtStartup")}</span>
+          <span className="settings-toggle-desc">{t("userSettings.about.launchAtStartupDesc")}</span>
+        </div>
+        <label className="settings-toggle">
+          <input
+            type="checkbox"
+            checked={startupEnabled}
+            onChange={handleToggleStartup}
+          />
+          <span className="settings-toggle-slider" />
+        </label>
       </div>
       <div className="about-actions">
         <button className="settings-btn" onClick={handleCheckForUpdates} disabled={checkState === "checking"}>

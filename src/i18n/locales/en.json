@@ -1437,6 +1437,8 @@
   "update.restart": "Restart",
   "update.restartReady": "Restart to finish updating",
   "update.updateNow": "Update now",
+  "userSettings.about.launchAtStartup": "Launch at startup",
+  "userSettings.about.launchAtStartupDesc": "Automatically start Haven when you log in to your computer",
   "userSettings.about.checkForUpdates": "Check for Updates",
   "userSettings.about.checking": "Checking...",
   "userSettings.about.openLogs": "Open Log Folder",
