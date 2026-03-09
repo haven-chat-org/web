@@ -619,6 +619,37 @@ body {
   cursor: not-allowed;
 }
 
+.server-connect-custom-link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.server-connect-custom-link:hover {
+  color: var(--text-primary);
+}
+.server-connect-back {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.server-connect-back:hover {
+  color: var(--text-primary);
+}
+
 .turnstile-container {
   display: flex;
   justify-content: center;
@@ -819,14 +850,22 @@ body {
 }
 
 /* ─── Tauri Desktop Shell ───────────────────────── */
-/* macOS overlay title bar: push content below traffic lights */
-html[data-tauri] body {
+/* Fallback until platform is detected */
+html[data-tauri]:not([data-platform]) body {
   padding-top: 28px;
 }
 
-/* Extra drag region next to macOS traffic lights */
+/* macOS: 28px for overlay traffic lights */
+html[data-platform="macos"] body {
+  padding-top: 28px;
+}
+/* Windows: 32px for decorum titlebar controls */
+html[data-platform="windows"] body {
+  padding-top: 32px;
+}
+
+/* Shared drag region base (height set per-platform below) */
 .titlebar-drag-region {
-  height: 28px;
   position: fixed;
   top: 0;
   left: 0;
@@ -834,6 +873,55 @@ html[data-tauri] body {
   z-index: 9999;
   -webkit-app-region: drag;
   app-region: drag;
+}
+
+/* macOS drag region: 28px to match traffic light height */
+html[data-platform="macos"] .titlebar-drag-region {
+  height: 28px;
+}
+/* Windows drag region: 32px to match decorum controls */
+html[data-platform="windows"] .titlebar-drag-region {
+  height: 32px;
+}
+/* Fallback height until platform is detected */
+html[data-tauri]:not([data-platform]) .titlebar-drag-region {
+  height: 28px;
+}
+
+/* ─── Decorum Window Controls (Windows) ────────── */
+/* Decorum injects: div[data-tauri-decorum-tb] containing
+   button#decorum-tb-minimize, button#decorum-tb-maximize, button#decorum-tb-close */
+html[data-platform="windows"] div[data-tauri-decorum-tb] {
+  z-index: 10000;
+}
+
+html[data-platform="windows"] button.decorum-tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  transition: background 0.1s ease;
+}
+
+html[data-platform="windows"] button.decorum-tb-btn:hover {
+  background: var(--bg-hover);
+}
+
+html[data-platform="windows"] button#decorum-tb-close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* Hide decorum controls on macOS (they should not render, but defensive) */
+html[data-platform="macos"] div[data-tauri-decorum-tb] {
+  display: none;
 }
 
 /* ─── Server Bar (far left, 72px) ────────────────── */
@@ -846,7 +934,7 @@ html[data-tauri] body {
   align-items: center;
   overflow: hidden;
   position: relative;
-  /* Pad for macOS overlay traffic lights */
+  /* Pad for titlebar overlay (macOS traffic lights, Windows decorum) */
   padding-top: env(titlebar-area-height, 0px);
 }
 
@@ -11642,4 +11730,74 @@ em-emoji-picker {
 .official-badge::before {
   content: "\2713";
   font-size: 9px;
+}
+
+/* Update banner -- Discord-style notification bar below titlebar */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--accent, #5865f2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 100;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.update-banner-text {
+  flex: 1;
+  text-align: center;
+}
+
+.update-banner-action {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.update-banner-action:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.update-banner-dismiss {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.update-banner-dismiss:hover {
+  color: #fff;
+}
+
+/* About section in User Settings */
+.about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.about-section .about-version {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.about-section .about-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

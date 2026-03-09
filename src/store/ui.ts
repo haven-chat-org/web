@@ -85,6 +85,11 @@ interface UiState {
   onboardingActive: boolean;      // transient
   onboardingRequested: boolean;   // transient
 
+  /** Auto-updater state (transient, not persisted) */
+  updateStatus: 'idle' | 'available' | 'downloading' | 'ready';
+  updateVersion: string | null;
+  updateDismissed: boolean;
+
   selectServer(id: string | null): void;
   toggleMemberSidebar(): void;
   setShowFriends(show: boolean): void;
@@ -127,6 +132,11 @@ interface UiState {
   setOnboardingActive(active: boolean): void;
   requestOnboarding(): void;
   clearOnboardingRequest(): void;
+  setUpdateAvailable(version: string): void;
+  setUpdateDownloading(): void;
+  setUpdateReady(): void;
+  dismissUpdate(): void;
+  resetUpdateDismissed(): void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -170,6 +180,9 @@ export const useUiStore = create<UiState>()(
       onboardingCompleted: false,
       onboardingActive: false,
       onboardingRequested: false,
+      updateStatus: 'idle',
+      updateVersion: null,
+      updateDismissed: false,
 
       selectServer(id) {
         set({
@@ -316,6 +329,11 @@ export const useUiStore = create<UiState>()(
       setOnboardingActive(active) { set({ onboardingActive: active }); },
       requestOnboarding() { set({ onboardingCompleted: false, onboardingRequested: true }); },
       clearOnboardingRequest() { set({ onboardingRequested: false }); },
+      setUpdateAvailable(version) { set({ updateStatus: 'available', updateVersion: version }); },
+      setUpdateDownloading() { set({ updateStatus: 'downloading' }); },
+      setUpdateReady() { set({ updateStatus: 'ready' }); },
+      dismissUpdate() { set({ updateDismissed: true }); },
+      resetUpdateDismissed() { set({ updateDismissed: false }); },
       setUserNote(userId, note) {
         set((s) => {
           if (!note.trim()) {

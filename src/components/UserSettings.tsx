@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth.js";
 import { useUiStore } from "../store/ui.js";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
+import { isTauri } from "../lib/tauriEnv.js";
 import AccountTab from "./UserSettings/AccountTab.js";
 import ProfileTab from "./UserSettings/ProfileTab.js";
 import PrivacyTab from "./UserSettings/PrivacyTab.js";
@@ -10,8 +11,9 @@ import VoiceTab from "./UserSettings/VoiceTab.js";
 import SecurityTab from "./UserSettings/SecurityTab.js";
 import AppearanceTab from "./UserSettings/AppearanceTab.js";
 import AccessibilityTab from "./UserSettings/AccessibilityTab.js";
+import AboutTab from "./UserSettings/AboutTab.js";
 
-type Tab = "account" | "profile" | "privacy" | "voice" | "appearance" | "accessibility" | "security";
+type Tab = "account" | "profile" | "privacy" | "voice" | "appearance" | "accessibility" | "security" | "about";
 
 export default function UserSettings() {
   const { t } = useTranslation();
@@ -81,6 +83,14 @@ export default function UserSettings() {
           >
             {t("userSettings.tab.accessibility")}
           </button>
+          {isTauri() && (
+            <button
+              className={`user-settings-nav-item ${tab === "about" ? "active" : ""}`}
+              onClick={() => setTab("about")}
+            >
+              {t("userSettings.tab.about")}
+            </button>
+          )}
           <div className="user-settings-sidebar-divider" />
           <button
             className="user-settings-nav-item danger"
@@ -94,7 +104,7 @@ export default function UserSettings() {
         </nav>
         <div className="user-settings-content">
           <div className="user-settings-content-header">
-            <h2>{tab === "account" ? t("userSettings.tab.myAccount") : tab === "profile" ? t("userSettings.tab.profile") : tab === "privacy" ? t("userSettings.tab.privacy") : tab === "voice" ? t("userSettings.tab.voiceAudio") : tab === "appearance" ? t("userSettings.tab.appearance") : tab === "security" ? t("userSettings.tab.securityBackup") : t("userSettings.tab.accessibility")}</h2>
+            <h2>{tab === "account" ? t("userSettings.tab.myAccount") : tab === "profile" ? t("userSettings.tab.profile") : tab === "privacy" ? t("userSettings.tab.privacy") : tab === "voice" ? t("userSettings.tab.voiceAudio") : tab === "appearance" ? t("userSettings.tab.appearance") : tab === "security" ? t("userSettings.tab.securityBackup") : tab === "about" ? t("userSettings.tab.about") : t("userSettings.tab.accessibility")}</h2>
             <button className="settings-esc-close" onClick={() => setShowUserSettings(false)} aria-label={t("userSettings.closeAriaLabel")}>
               <div className="settings-esc-circle">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -112,6 +122,7 @@ export default function UserSettings() {
             {tab === "appearance" && <AppearanceTab />}
             {tab === "security" && <SecurityTab />}
             {tab === "accessibility" && <AccessibilityTab />}
+            {tab === "about" && <AboutTab />}
           </div>
         </div>
       </div>

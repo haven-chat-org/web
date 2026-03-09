@@ -1,10 +1,15 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { needsServerUrl } from "./lib/serverUrl";
-import { isTauri } from "./lib/tauriEnv";
+import { isTauri, getPlatform } from "./lib/tauriEnv";
+import { initLogging } from "./lib/logging.js";
+import { initTraySubscription } from "./lib/tray.js";
+import { initDeepLinks } from "./lib/deep-link.js";
 import { useAuthStore } from "./store/auth.js";
 import { useUiStore } from "./store/ui.js";
 import { sanitizeCss } from "./lib/sanitize-css.js";
+import { useUpdateChecker } from "./hooks/useUpdateChecker.js";
+import UpdateBanner from "./components/UpdateBanner.js";
 import "./i18n/index.js";
 import Login from "./pages/Login.js";
 import Register from "./pages/Register.js";
@@ -31,7 +36,12 @@ function useA11yAttributes() {
     const el = document.documentElement;
     el.setAttribute("data-theme", theme);
 
-    if (isTauri()) el.setAttribute("data-tauri", "");
+    if (isTauri()) {
+      el.setAttribute("data-tauri", "");
+      getPlatform().then((p) => {
+        el.setAttribute("data-platform", p);
+      });
+    }
 
     if (reducedMotion) el.setAttribute("data-reduced-motion", "");
     else el.removeAttribute("data-reduced-motion");
@@ -66,7 +76,22 @@ export default function App() {
   const initialized = useAuthStore((s) => s.initialized);
   const user = useAuthStore((s) => s.user);
 
+  const navigate = useNavigate();
+
   useA11yAttributes();
+  useUpdateChecker();
+
+  useEffect(() => {
+    initLogging();
+  }, []);
+
+  useEffect(() => {
+    initTraySubscription();
+  }, []);
+
+  useEffect(() => {
+    initDeepLinks(navigate);
+  }, [navigate]);
 
   useEffect(() => {
     init();
@@ -79,6 +104,7 @@ export default function App() {
   return (
     <>
       {isTauri() && <div className="titlebar-drag-region" data-tauri-drag-region />}
+      {isTauri() && <UpdateBanner />}
       <Routes>
         <Route path="/connect" element={<ServerConnect />} />
         <Route path="/login" element={connectRequired ? <Navigate to="/connect" replace /> : user ? <Navigate to="/" replace /> : <Login />} />
