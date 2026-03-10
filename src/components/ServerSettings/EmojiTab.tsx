@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/auth.js";
 import { useChatStore } from "../../store/chat.js";
+import { getServerUrl } from "../../lib/serverUrl.js";
 
 interface EmojiTabProps {
   serverId: string;
@@ -19,6 +20,7 @@ export default function EmojiTab({
   const customEmojis = useChatStore((s) => s.customEmojis);
   const userNames = useChatStore((s) => s.userNames);
   const serverEmojis = customEmojis[serverId] ?? [];
+  const baseUrl = useMemo(() => getServerUrl(), []);
   const staticCount = serverEmojis.filter((e) => !e.animated).length;
   const animatedCount = serverEmojis.filter((e) => e.animated).length;
 
@@ -143,7 +145,7 @@ export default function EmojiTab({
           {serverEmojis.map((emoji) => (
             <div key={emoji.id} className="emoji-manage-row emoji-manage-4col">
               <img
-                src={emoji.image_url}
+                src={`${baseUrl}${emoji.image_url}`}
                 alt={emoji.name}
                 className="emoji-manage-img"
               />

@@ -13,6 +13,7 @@ const ProfilePopup = lazy(() => import("./ProfilePopup.js"));
 import Avatar from "./Avatar.js";
 import { parseNamesFromMeta, parseChannelDisplay } from "../lib/channel-utils.js";
 import EmojiPicker from "./EmojiPicker.js";
+import { getServerUrl } from "../lib/serverUrl.js";
 import MessageContextMenu from "./MessageContextMenu.js";
 import ReportModal from "./ReportModal.js";
 import ForwardModal from "./ForwardModal.js";
@@ -187,6 +188,7 @@ export default function MessageList() {
   const user = useAuthStore((s) => s.user);
   const friends = useFriendsStore((s) => s.friends);
   const systemUserIds = useMemo(() => new Set(friends.filter((f) => f.is_system).map((f) => f.user_id)), [friends]);
+  const baseUrl = useMemo(() => getServerUrl(), []);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const channelMessages = currentChannelId ? messages[currentChannelId] ?? [] : [];
@@ -522,7 +524,7 @@ export default function MessageList() {
                             // Check if this is a custom emoji (UUID format)
                             const customId = r.emoji.match(/^:?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):?$/i)?.[1];
                             const ce = customId ? customEmojiMap.get(customId) : null;
-                            if (ce) return <img className="custom-emoji-reaction" src={`${ce.image_url}`} alt={`:${ce.name}:`} />;
+                            if (ce) return <img className="custom-emoji-reaction" src={`${baseUrl}${ce.image_url}`} alt={`:${ce.name}:`} />;
                             return r.emoji;
                           })()}</span>
                           <span className="reaction-count">{r.userIds.length}</span>
