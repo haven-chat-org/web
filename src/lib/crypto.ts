@@ -503,6 +503,12 @@ export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMe
     let otpKeyPair = null;
     if (usedOtp && otpPublicKey) {
       otpKeyPair = await store.consumeOneTimePreKey(otpPublicKey);
+      if (!otpKeyPair) {
+        throw new Error(
+          "OTP private key not found — cannot complete X3DH. " +
+          "The sender used a one-time prekey that has been lost (e.g. after logout/reload).",
+        );
+      }
     }
 
     // Derive the shared secret (mirror of Alice's x3dhInitiate)

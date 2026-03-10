@@ -6,7 +6,7 @@
  * Same security boundary as localStorage (identity key already stored there).
  */
 
-import { getSodium } from "@haven-chat-org/core";
+import { getSodium, toBase64, fromBase64 } from "@haven-chat-org/core";
 
 const DB_NAME = "haven-crypto";
 const DB_VERSION = 1;
@@ -59,7 +59,23 @@ export async function persistCryptoState(
 
   const sodium = getSodium();
   const payload = buildBackupPayload();
-  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+
+  // Persist OTP private keys alongside the backup payload so they survive
+  // logout/reload. Without this, incoming initial DMs that used an OTP
+  // produce a wrong X3DH shared secret (DH4 is skipped), breaking the session.
+  const { useAuthStore } = await import("../store/auth.js");
+  const { store } = useAuthStore.getState();
+  // MemoryStore.oneTimePreKeys is declared private in TS but accessible at runtime.
+  // The store API only exposes consume (destructive) and save (append), so we
+  // read the backing array directly for non-destructive serialization.
+  const otpKeys = (store as unknown as { oneTimePreKeys: { publicKey: Uint8Array; privateKey: Uint8Array }[] }).oneTimePreKeys;
+  const serializedOtps = otpKeys.map((kp) => ({
+    publicKey: toBase64(kp.publicKey),
+    privateKey: toBase64(kp.privateKey),
+  }));
+  const extendedPayload = { ...payload, oneTimePreKeys: serializedOtps };
+
+  const plaintext = new TextEncoder().encode(JSON.stringify(extendedPayload));
   const key = deriveStorageKey(identityPrivateKey);
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
   const encrypted = sodium.crypto_secretbox_easy(plaintext, nonce, key);
@@ -110,6 +126,19 @@ export async function loadCryptoState(
     );
     const payload = JSON.parse(new TextDecoder().decode(plaintext));
     restoreCryptoFromPayload(payload);
+
+    // Restore OTP private keys into the MemoryStore so incoming initial DMs
+    // that used an OTP can complete X3DH correctly (DH4 computation).
+    if (Array.isArray(payload.oneTimePreKeys) && payload.oneTimePreKeys.length > 0) {
+      const { useAuthStore } = await import("../store/auth.js");
+      const { store } = useAuthStore.getState();
+      const otpKeys = payload.oneTimePreKeys.map((kp: { publicKey: string; privateKey: string }) => ({
+        publicKey: fromBase64(kp.publicKey),
+        privateKey: fromBase64(kp.privateKey),
+      }));
+      await store.saveOneTimePreKeys(otpKeys);
+    }
+
     return true;
   } catch {
     // Decryption failed (wrong key, corrupted data) — discard silently
