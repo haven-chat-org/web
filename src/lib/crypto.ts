@@ -394,6 +394,47 @@ export async function encryptOutgoing(
 }
 
 /**
+ * Safely decode decrypted bytes to a JSON string and parse it.
+ * Validates that the plaintext looks like UTF-8 JSON before decoding,
+ * and catches TextDecoder failures from corrupted/non-UTF-8 output.
+ */
+function decodeAndParsePayload(plaintext: Uint8Array, context: string): Record<string, unknown> {
+  // Validate first byte looks like the start of a JSON object or array
+  if (plaintext.length === 0) {
+    throw new Error(`${context}: decrypted payload is empty`);
+  }
+  const firstByte = plaintext[0];
+  // 0x7B = '{', 0x5B = '['
+  if (firstByte !== 0x7B && firstByte !== 0x5B) {
+    throw new Error(
+      `${context}: decrypted payload does not start with valid JSON ` +
+      `(first byte: 0x${firstByte.toString(16).padStart(2, "0")}). ` +
+      `Session state may be corrupted — consider re-establishing the session.`,
+    );
+  }
+
+  let decoded: string;
+  try {
+    decoded = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+  } catch {
+    throw new Error(
+      `${context}: decrypted payload is not valid UTF-8. ` +
+      `Session state may be corrupted — consider re-establishing the session.`,
+    );
+  }
+
+  return JSON.parse(decoded);
+}
+
+/**
+ * Snapshot a Double Ratchet session so we can roll back if decrypt fails.
+ * Uses the built-in serialize/deserialize to deep-clone the session state.
+ */
+function snapshotSession(session: DoubleRatchetSession, ad: Uint8Array): DoubleRatchetSession {
+  return DoubleRatchetSession.deserialize(session.serialize(), ad);
+}
+
+/**
  * Decrypt an incoming message from the server.
  */
 export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMessage> {
@@ -402,7 +443,7 @@ export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMe
 
   // Legacy unencrypted message (backwards compatibility)
   if (type === 0x00) {
-    const payload = JSON.parse(new TextDecoder().decode(bodyBytes.slice(1)));
+    const payload = decodeAndParsePayload(bodyBytes.slice(1), "Unencrypted message");
     return buildDecryptedMessage(raw, payload);
   }
 
@@ -425,7 +466,7 @@ export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMe
     }
 
     const plaintext = senderKeyDecrypt(bodyBytes, entry.key);
-    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    const payload = decodeAndParsePayload(plaintext, "Group message (Sender Keys)");
     return buildDecryptedMessage(raw, payload);
   }
 
@@ -480,17 +521,43 @@ export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMe
       signedPreKey.keyPair,
     );
 
+    // Snapshot session before decrypt so we can roll back on failure.
+    // DR state mutation (ratchet step, chain key advance) happens before
+    // AEAD verification — if decrypt fails, the session would be corrupted.
+    const sessionBackup = snapshotSession(session, x3dhResult.associatedData);
+
     // Decrypt the DR payload
     const encrypted = deserializeMessage(serializedMsg);
-    const plaintext = session.decrypt(encrypted);
-    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    let plaintext: Uint8Array;
+    try {
+      plaintext = session.decrypt(encrypted);
+    } catch (e) {
+      // Decrypt failed (AEAD verification) — session state is now corrupted.
+      // Since this is a fresh initBob session, we don't need to restore into
+      // a cache — just re-throw with context.
+      throw new Error(
+        `Initial DM decrypt failed (AEAD): ${e instanceof Error ? e.message : e}. ` +
+        `The sender may need to re-establish the session.`,
+      );
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = decodeAndParsePayload(plaintext, "Initial DM (Double Ratchet)");
+    } catch (e) {
+      // Payload wasn't valid UTF-8/JSON — session ratchet already advanced,
+      // so we must NOT cache this corrupted session. Re-throw with context.
+      throw new Error(
+        `Initial DM payload decode failed: ${e instanceof Error ? e.message : e}`,
+      );
+    }
 
     // Cache the session keyed by the sender's user ID (discovered from payload).
     // This replaces any existing session for this peer (e.g., a stale initiator session).
     const senderId = payload.sender_id;
-    sessions.set(senderId, session);
-    sessionAD.set(senderId, x3dhResult.associatedData);
-    channelPeerMap.set(raw.channel_id, senderId);
+    sessions.set(senderId as string, session);
+    sessionAD.set(senderId as string, x3dhResult.associatedData);
+    channelPeerMap.set(raw.channel_id, senderId as string);
 
     scheduleAutoBackup();
     return buildDecryptedMessage(raw, payload);
@@ -506,9 +573,43 @@ export async function decryptIncoming(raw: MessageResponse): Promise<DecryptedMe
     }
 
     const session = sessions.get(peerId)!;
+    const ad = sessionAD.get(peerId);
+    if (!ad) {
+      throw new Error("No associated data for session — state is inconsistent");
+    }
+
+    // Snapshot session before decrypt. The DR decrypt() method mutates state
+    // (ratchet step, chain key advance, skipped key computation) BEFORE AEAD
+    // verification. If AEAD fails, the session is permanently corrupted and
+    // all subsequent messages will produce garbage that crashes TextDecoder.
+    const sessionBackup = snapshotSession(session, ad);
+
     const encrypted = deserializeMessage(serializedMsg);
-    const plaintext = session.decrypt(encrypted);
-    const payload = JSON.parse(new TextDecoder().decode(plaintext));
+    let plaintext: Uint8Array;
+    try {
+      plaintext = session.decrypt(encrypted);
+    } catch (e) {
+      // Decrypt failed — roll back session to pre-decrypt state
+      sessions.set(peerId, sessionBackup);
+      throw new Error(
+        `Follow-up DM decrypt failed (AEAD): ${e instanceof Error ? e.message : e}. ` +
+        `Session rolled back to prevent corruption.`,
+      );
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = decodeAndParsePayload(plaintext, "Follow-up DM (Double Ratchet)");
+    } catch (e) {
+      // AEAD passed but payload is not valid UTF-8/JSON — this is unexpected.
+      // Roll back session since the message couldn't be processed.
+      sessions.set(peerId, sessionBackup);
+      throw new Error(
+        `Follow-up DM payload decode failed: ${e instanceof Error ? e.message : e}. ` +
+        `Session rolled back to prevent corruption.`,
+      );
+    }
+
     return buildDecryptedMessage(raw, payload);
   }
 
