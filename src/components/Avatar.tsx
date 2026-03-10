@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface AvatarProps {
   avatarUrl?: string | null;
@@ -9,6 +9,11 @@ interface AvatarProps {
 
 export default function Avatar({ avatarUrl, name, size = 32, className = "" }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
+
+  // Reset error state when the URL changes (e.g. after a new upload with cache-busting param)
+  useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
 
   const initial = (name || "?").charAt(0).toUpperCase();
 

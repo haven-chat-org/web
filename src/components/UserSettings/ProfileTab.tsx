@@ -57,8 +57,15 @@ export default function ProfileTab() {
     try {
       const buf = await file.arrayBuffer();
       const updated = await api.uploadAvatar(buf);
+      // Append cache-busting param so browsers refetch the new image
+      const bustCache = (url?: string | null): string | null =>
+        url ? `${url.split("?")[0]}?t=${Date.now()}` : null;
       useAuthStore.setState({
-        user: { ...user!, ...updated },
+        user: {
+          ...user!,
+          ...updated,
+          avatar_url: bustCache(updated.avatar_url),
+        },
       });
       setSuccess(t("userSettings.profile.avatarUpdated"));
     } catch (err: any) {
@@ -81,8 +88,15 @@ export default function ProfileTab() {
     try {
       const buf = await file.arrayBuffer();
       const updated = await api.uploadBanner(buf);
+      // Append cache-busting param so browsers refetch the new image
+      const bustCache = (url?: string | null): string | null =>
+        url ? `${url.split("?")[0]}?t=${Date.now()}` : null;
       useAuthStore.setState({
-        user: { ...user!, ...updated },
+        user: {
+          ...user!,
+          ...updated,
+          banner_url: bustCache(updated.banner_url),
+        },
       });
       setSuccess(t("userSettings.profile.bannerUpdated"));
     } catch (err: any) {
