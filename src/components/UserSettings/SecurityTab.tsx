@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "../../store/auth.js";
+import { useAuthStore, persistIdentityKey } from "../../store/auth.js";
 import { QRCodeSVG } from "qrcode.react";
-import { generateRecoveryKey, generatePassphrase } from "@haven-chat-org/core";
+import {
+  generateRecoveryKey,
+  generatePassphrase,
+  generateIdentityKeyPair,
+  generateSignedPreKey,
+  generateOneTimePreKeys,
+  prepareRegistrationKeys,
+} from "@haven-chat-org/core";
+import { clearCryptoState } from "../../lib/crypto.js";
+import { clearCryptoStore } from "../../lib/crypto-store.js";
 import {
   uploadBackup,
   cacheSecurityPhrase,
@@ -35,6 +44,65 @@ export default function SecurityTab() {
   const [totpSuccess, setTotpSuccess] = useState("");
   const [totpSaving, setTotpSaving] = useState(false);
   const [totpSecretCopied, setTotpSecretCopied] = useState(false);
+
+  // Reset encryption
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
+  const PREKEY_BATCH = 20;
+
+  async function handleResetEncryption() {
+    if (resetConfirmText !== "RESET") return;
+    setResetting(true);
+    setResetError("");
+    try {
+      const { api, user, store } = useAuthStore.getState();
+      if (!user) return;
+
+      // 1. Delete server backup
+      await api.deleteKeyBackup().catch(() => {});
+      // 2. Clear all local crypto state
+      clearCryptoState();
+      clearCryptoStore(user.id);
+      // 3. Generate fresh keys
+      const identity = generateIdentityKeyPair();
+      persistIdentityKey(user.id, identity);
+      const signedPre = generateSignedPreKey(identity);
+      const oneTimeKeys = generateOneTimePreKeys(PREKEY_BATCH);
+
+      await store.saveIdentityKeyPair(identity);
+      await store.saveSignedPreKey(signedPre);
+      await store.saveOneTimePreKeys(oneTimeKeys);
+
+      const keys = prepareRegistrationKeys(identity, signedPre, oneTimeKeys);
+      // 4. Upload new keys (sequential to avoid race)
+      await api.updateKeys({
+        identity_key: keys.identity_key,
+        signed_prekey: keys.signed_prekey,
+        signed_prekey_signature: keys.signed_prekey_signature,
+      });
+      await api.clearPreKeys();
+      await api.uploadPreKeys({ prekeys: keys.one_time_prekeys });
+
+      // 5. Update store
+      useAuthStore.setState({
+        identityKeyPair: identity,
+        signedPreKey: signedPre,
+        backupPending: false,
+        backupAvailable: false,
+      });
+
+      setBackupExists(false);
+      setResetSuccess(t("userSettings.security.resetEncryptionSuccess"));
+      setResetConfirmText("");
+    } catch (e) {
+      setResetError(e instanceof Error ? e.message : t("userSettings.security.resetEncryptionFailed"));
+    } finally {
+      setResetting(false);
+    }
+  }
 
   // Change phrase flow
   type Mode = "idle" | "change" | "setup" | "generated";
@@ -644,6 +712,34 @@ export default function SecurityTab() {
       )}
 
       {success && <div className="settings-success" style={{ marginTop: 12 }}>{success}</div>}
+    </div>
+
+    <div className="settings-section">
+      <div className="settings-section-title" style={{ color: "var(--red)" }}>{t("userSettings.security.resetEncryption")}</div>
+      <p className="settings-description">
+        {t("userSettings.security.resetEncryptionDesc")}
+      </p>
+      <label className="settings-field-label">
+        {t("userSettings.security.resetEncryptionConfirm")}
+        <input
+          className="settings-input"
+          type="text"
+          value={resetConfirmText}
+          onChange={(e) => { setResetConfirmText(e.target.value.toUpperCase()); setResetError(""); setResetSuccess(""); }}
+          placeholder="RESET"
+          disabled={resetting}
+        />
+      </label>
+      {resetError && <div className="settings-error">{resetError}</div>}
+      {resetSuccess && <div className="settings-success">{resetSuccess}</div>}
+      <button
+        className="btn-secondary btn-danger-outline"
+        onClick={handleResetEncryption}
+        disabled={resetting || resetConfirmText !== "RESET"}
+        style={{ marginTop: 8 }}
+      >
+        {resetting ? t("userSettings.security.loading") : t("userSettings.security.resetEncryptionButton")}
+      </button>
     </div>
     </>
   );
