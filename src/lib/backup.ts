@@ -222,6 +222,23 @@ export async function uploadBackup(securityPhrase: string): Promise<void> {
 }
 
 /**
+ * Download and decrypt a backup from the server WITHOUT restoring any state.
+ * Used to verify that a security phrase is correct without side effects.
+ * Throws if the security phrase is wrong (Poly1305 auth failure).
+ */
+export async function verifyBackupPhrase(securityPhrase: string): Promise<void> {
+  const { api } = useAuthStore.getState();
+  const response = await api.getKeyBackup();
+
+  const encrypted = fromBase64(response.encrypted_data);
+  const nonce = fromBase64(response.nonce);
+  const salt = fromBase64(response.salt);
+
+  // This will throw if the phrase is wrong (Poly1305 auth failure)
+  decryptBackup(encrypted, nonce, salt, securityPhrase);
+}
+
+/**
  * Download and decrypt a backup from the server, restoring all crypto state.
  * Throws if the security phrase is wrong (Poly1305 auth failure).
  */

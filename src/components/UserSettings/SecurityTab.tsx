@@ -8,7 +8,7 @@ import {
   cacheSecurityPhrase,
   getCachedPhrase,
   checkBackupStatus,
-  downloadAndRestoreBackup,
+  verifyBackupPhrase,
 } from "../../lib/backup.js";
 
 export default function SecurityTab() {
@@ -112,9 +112,9 @@ export default function SecurityTab() {
         setSaving(false);
         return;
       }
-      // Verify current phrase by attempting to download and decrypt
+      // Verify current phrase by decrypting the backup (without restoring state)
       if (!cached) {
-        await downloadAndRestoreBackup(currentPhrase);
+        await verifyBackupPhrase(currentPhrase);
       }
       // Upload new backup with new phrase
       await uploadBackup(newPhrase);

@@ -17,9 +17,8 @@ import {
   type DHKeyPair,
 } from "@haven-chat-org/core";
 import { clearCryptoState } from "../lib/crypto.js";
-import { clearMessageCache } from "../lib/message-cache.js";
 import { checkBackupStatus, clearCachedPhrase } from "../lib/backup.js";
-import { loadCryptoState, clearCryptoStore } from "../lib/crypto-store.js";
+import { loadCryptoState, persistCryptoState, clearCryptoStore } from "../lib/crypto-store.js";
 import { initNotifications } from "../lib/notifications.js";
 
 const PREKEY_BATCH_SIZE = 20;
@@ -236,31 +235,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // New identity key — must update everything and clear stale crypto state
       clearCryptoState();
       clearCryptoStore(res.user.id);
-      await Promise.all([
-        api.updateKeys({
-          identity_key: keys.identity_key,
-          signed_prekey: keys.signed_prekey,
-          signed_prekey_signature: keys.signed_prekey_signature,
-        }),
-        // Clear stale OTPs (whose private keys are lost) before uploading fresh ones
-        api.clearPreKeys().then(() =>
-          api.uploadPreKeys({ prekeys: keys.one_time_prekeys }),
-        ),
-      ]);
-    } else {
-      // Same identity key — reuse signed prekey, refresh one-time prekeys.
-      // Clear stale OTPs from previous sessions before uploading fresh ones.
-      await Promise.all([
-        api.updateKeys({
-          identity_key: keys.identity_key,
-          signed_prekey: keys.signed_prekey,
-          signed_prekey_signature: keys.signed_prekey_signature,
-        }),
-        api.clearPreKeys().then(() =>
-          api.uploadPreKeys({ prekeys: keys.one_time_prekeys }),
-        ),
-      ]);
     }
+
+    // Upload keys sequentially to avoid a window where the server's key
+    // bundle is inconsistent (e.g. another user fetches mismatched keys).
+    await api.updateKeys({
+      identity_key: keys.identity_key,
+      signed_prekey: keys.signed_prekey,
+      signed_prekey_signature: keys.signed_prekey_signature,
+    });
+    await api.clearPreKeys();
+    await api.uploadPreKeys({ prekeys: keys.one_time_prekeys });
 
     set({
       user: res.user,
@@ -285,13 +270,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout() {
-    const { api } = get();
+    const { api, user, identityKeyPair } = get();
     api.logout().catch(() => {});
+
+    // Flush crypto state to IndexedDB immediately before clearing,
+    // so sessions established within the debounce window are not lost.
+    if (user && identityKeyPair) {
+      persistCryptoState(user.id, identityKeyPair.privateKey).catch(() => {});
+    }
+
     // Clear in-memory E2EE state (sessions, sender keys, etc.)
     clearCryptoState();
     clearCachedPhrase();
-    // Clear decrypted message caches (localStorage + IndexedDB)
-    clearMessageCache();
     set({
       user: null,
       identityKeyPair: null,
@@ -301,6 +291,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     // Note: we deliberately keep the persisted identity key in localStorage
     // so re-login on the same browser reuses it.
+    // Note: message cache is intentionally preserved — Double Ratchet sessions
+    // can't re-decrypt historical messages, so clearing the cache would cause
+    // them to permanently show as "[encrypted message]" after re-login.
   },
 }));
 

@@ -6,6 +6,7 @@ import {
   generateOneTimePreKeys,
   prepareRegistrationKeys,
   toBase64,
+  type SignedPreKey,
 } from "@haven-chat-org/core";
 import { downloadAndRestoreBackup, cacheSecurityPhrase } from "../lib/backup.js";
 import { useAuthStore, persistIdentityKey } from "../store/auth.js";
@@ -32,16 +33,19 @@ export default function SecurityPhraseRestore() {
       await downloadAndRestoreBackup(phrase.trim());
       cacheSecurityPhrase(phrase.trim());
 
-      // After restore, upload fresh prekeys (identity key came from backup)
-      const { api, identityKeyPair, store } = useAuthStore.getState();
-      if (identityKeyPair) {
-        const signedPre = generateSignedPreKey(identityKeyPair);
+      // After restore, upload fresh one-time prekeys and re-register the
+      // restored signed prekey (identity key + signed prekey came from backup).
+      // We must NOT generate a new signed prekey here — reuse the one from the
+      // backup so pending X3DH initial messages (sent using the old key bundle)
+      // can still be decrypted.
+      const { api, identityKeyPair, signedPreKey, store } = useAuthStore.getState();
+      if (identityKeyPair && signedPreKey) {
         const oneTimeKeys = generateOneTimePreKeys(PREKEY_BATCH_SIZE);
         await store.saveIdentityKeyPair(identityKeyPair);
-        await store.saveSignedPreKey(signedPre);
+        await store.saveSignedPreKey(signedPreKey);
         await store.saveOneTimePreKeys(oneTimeKeys);
 
-        const keys = prepareRegistrationKeys(identityKeyPair, signedPre, oneTimeKeys);
+        const keys = prepareRegistrationKeys(identityKeyPair, signedPreKey as SignedPreKey, oneTimeKeys);
         await Promise.all([
           api.updateKeys({
             identity_key: keys.identity_key,
@@ -50,8 +54,6 @@ export default function SecurityPhraseRestore() {
           }),
           api.uploadPreKeys({ prekeys: keys.one_time_prekeys }),
         ]);
-
-        useAuthStore.setState({ signedPreKey: signedPre });
       }
 
       completeBackupSetup();
