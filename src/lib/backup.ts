@@ -31,6 +31,9 @@ export function getCachedPhrase(): string | null {
 
 export function clearCachedPhrase(): void {
   cachedPhrase = null;
+  // Cancel any pending auto-backup timers so a stale phrase can't re-upload
+  if (autoBackupTimer) { clearTimeout(autoBackupTimer); autoBackupTimer = null; }
+  if (localPersistTimer) { clearTimeout(localPersistTimer); localPersistTimer = null; }
 }
 
 // Clear on page unload to avoid leaking into process memory longer than needed

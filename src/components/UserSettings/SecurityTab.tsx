@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuthStore, persistIdentityKey } from "../../store/auth.js";
+import { useAuthStore, persistIdentityKey, persistSignedPreKey } from "../../store/auth.js";
 import { QRCodeSVG } from "qrcode.react";
 import {
   generateRecoveryKey,
@@ -16,6 +16,7 @@ import {
   uploadBackup,
   cacheSecurityPhrase,
   getCachedPhrase,
+  clearCachedPhrase,
   checkBackupStatus,
   verifyBackupPhrase,
 } from "../../lib/backup.js";
@@ -61,15 +62,19 @@ export default function SecurityTab() {
       const { api, user, store } = useAuthStore.getState();
       if (!user) return;
 
-      // 1. Delete server backup
+      // 1. Kill cached phrase + pending auto-backup timers FIRST
+      // (prevents auto-backup from silently re-uploading with old phrase)
+      clearCachedPhrase();
+      // 2. Delete server backup
       await api.deleteKeyBackup().catch(() => {});
-      // 2. Clear all local crypto state
+      // 3. Clear all local crypto state
       clearCryptoState();
       clearCryptoStore(user.id);
-      // 3. Generate fresh keys
+      // 4. Generate fresh keys
       const identity = generateIdentityKeyPair();
       persistIdentityKey(user.id, identity);
       const signedPre = generateSignedPreKey(identity);
+      persistSignedPreKey(user.id, signedPre);
       const oneTimeKeys = generateOneTimePreKeys(PREKEY_BATCH);
 
       await store.saveIdentityKeyPair(identity);
@@ -77,7 +82,7 @@ export default function SecurityTab() {
       await store.saveOneTimePreKeys(oneTimeKeys);
 
       const keys = prepareRegistrationKeys(identity, signedPre, oneTimeKeys);
-      // 4. Upload new keys (sequential to avoid race)
+      // 5. Upload new keys (sequential to avoid race)
       await api.updateKeys({
         identity_key: keys.identity_key,
         signed_prekey: keys.signed_prekey,
@@ -86,7 +91,7 @@ export default function SecurityTab() {
       await api.clearPreKeys();
       await api.uploadPreKeys({ prekeys: keys.one_time_prekeys });
 
-      // 5. Update store
+      // 6. Update store
       useAuthStore.setState({
         identityKeyPair: identity,
         signedPreKey: signedPre,
